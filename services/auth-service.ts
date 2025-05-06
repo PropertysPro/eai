@@ -208,18 +208,16 @@ export const register = async (email: string, password: string, name?: string, p
     console.log('[Auth Service] Registering user:', email);
     
     // Register user with Supabase Auth and send confirmation email
-    const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           name: name || email.split('@')[0],
-          phone: phone || '',
           role: roles && roles.length > 0 ? roles[0] : 'user',
           onboarding_completed: false,
         },
-        // This ensures a confirmation email is sent
-        emailRedirectTo: 'https://gjymtvzdvyekhocqyvpa.supabase.co/auth/v1/verify?redirect_to=elmeai://auth/confirm-email',
+        emailRedirectTo: 'https://gjymtvzdvyekhocqyvpa.supabase.co/auth/v1/verify?redirect_to=elmeai://auth/confirm-email'
       },
     });
 
@@ -317,27 +315,26 @@ export const createUserProfile = async (userId: string, email: string, name?: st
           message_limit: 100,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          email_verified: false, // Set to false initially, will be updated when user confirms email
+          email_verified: false,
           onboarding_completed: false,
-          // User Preferences
           language: 'en',
           dark_mode: false,
           biometric_auth: false,
-          // Notification Preferences
           notification_matches: true,
           notification_market_updates: true,
           notification_new_listings: true,
           notification_subscription_updates: true,
-          // Property Preferences
           property_types: [],
           property_budget_min: 500000,
+          property_budget_max: 2000000, // Added default max budget
           property_bedrooms: 0,
           property_bathrooms: 0,
           property_locations: [],
-          // Additional Preferences
           location: 'Dubai, UAE',
           currency: 'AED',
-          is_negotiable: false
+          is_negotiable: false,
+          requesting_price: null,
+          phone: phone || ''
         };
         console.log('[Auth Service] Attempting to upsert profile with data:', JSON.stringify(upsertData));
         const { error: upsertError } = await supabase
