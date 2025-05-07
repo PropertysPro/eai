@@ -326,6 +326,7 @@ export const createUserProfile = async (userId: string, email: string, name?: st
           notification_subscription_updates: true,
           property_types: [],
           property_budget_min: 500000,
+          property_budget_max: 2000000, // Added default max budget
           property_bedrooms: 0,
           property_bathrooms: 0,
           property_locations: [],

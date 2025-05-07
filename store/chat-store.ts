@@ -203,6 +203,9 @@ export const useChatStore = create<ChatStore>()(
       },
       
       sendMessage: async (content: string, attachments?: Attachment[]) => {
+        let updatedSession: ChatSession;
+        let assistantMessage: ChatMessage;
+
         try {
           set({ isLoading: true, error: null });
           
@@ -222,20 +225,84 @@ export const useChatStore = create<ChatStore>()(
           };
           
           // Add user message to session
-          const updatedSession = {
-            ...currentSession,
-            messages: [...currentSession.messages, userMessage],
-            messageCount: currentSession.messageCount + 1,
-            updatedAt: new Date().toISOString()
-          };
-          
-          // Update store with user message
-          set((state) => ({
-            sessions: state.sessions.map((s) => 
-              s.id === updatedSession.id ? updatedSession : s
-            ),
-            currentSession: updatedSession,
-          }));
+          // Send message to external webhook
+          try {
+            const response = await fetch('https://cemai.app.n8n.cloud/webhook/cemai', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                content,
+                sessionId: currentSession.id,
+                userMessageId: userMessage.id,
+                createdAt: userMessage.createdAt,
+                attachments
+              })
+            });
+
+            console.log('[Chat Store] Webhook response status:', response.status);
+
+            if (!response.ok) {
+              console.error('[Chat Store] Webhook failed with status:', response.status);
+              throw new Error(`Webhook failed with status ${response.status}`);
+            }
+
+            const text = await response.text();
+            console.log('[Chat Store] Webhook response text:', text);
+
+            if (!text) {
+              console.error('[Chat Store] Webhook returned empty response');
+              // Create a default assistant message
+              assistantMessage = {
+                id: uuidv4(),
+                content: 'Sorry, I encountered an error processing your message.',
+                role: 'assistant' as MessageRole,
+                createdAt: new Date().toISOString(),
+              };
+              
+              updatedSession = {
+                ...currentSession,
+                messages: [...currentSession.messages, userMessage, assistantMessage],
+                messageCount: currentSession.messageCount + 2,
+                updatedAt: new Date().toISOString()
+              };
+            } else {
+              const data = JSON.parse(text);
+              console.log('[Chat Store] Webhook response data:', data);
+
+              // Create assistant message
+              assistantMessage = {
+                id: uuidv4(),
+                content: data[0].output,
+                role: 'assistant' as MessageRole,
+                createdAt: new Date().toISOString(),
+              };
+
+              console.log('[Chat Store] Assistant message:', assistantMessage);
+
+              updatedSession = {
+                ...currentSession,
+                messages: [...currentSession.messages, userMessage, assistantMessage],
+                messageCount: currentSession.messageCount + 2,
+                updatedAt: new Date().toISOString()
+              };
+
+              // Update store with user message
+              set((state) => ({
+                sessions: state.sessions.map((s) => 
+                  s.id === updatedSession.id ? updatedSession : s
+                ),
+                currentSession: updatedSession,
+                isLoading: false,
+              }));
+            }
+
+          } catch (webhookError: any) {
+            console.error('[Chat Store] Error sending message to webhook:', webhookError);
+            set({ error: webhookError.message, isLoading: false });
+            throw webhookError;
+          }
           
           // Try to save message to Supabase if available
           try {
@@ -288,34 +355,6 @@ export const useChatStore = create<ChatStore>()(
             console.error('[Chat Store] Error saving to Supabase:', error.message);
             // Continue even if Supabase save fails
           }
-          
-          // Simulate API call delay
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          
-          // Create assistant response
-          const assistantMessage: ChatMessage = {
-            id: uuidv4(),
-            content: generateMockResponse(content),
-            role: 'assistant' as MessageRole,
-            createdAt: new Date().toISOString(),
-          };
-          
-          // Add assistant message to session
-          const finalSession = {
-            ...updatedSession,
-            messages: [...updatedSession.messages, assistantMessage],
-            messageCount: updatedSession.messageCount + 1,
-            updatedAt: new Date().toISOString()
-          };
-          
-          // Update store with assistant message
-          set((state) => ({
-            sessions: state.sessions.map((s) => 
-              s.id === finalSession.id ? finalSession : s
-            ),
-            currentSession: finalSession,
-            isLoading: false,
-          }));
           
           return userMessage;
         } catch (error: any) {
@@ -590,7 +629,7 @@ export const useChatStore = create<ChatStore>()(
                     id: sessionData.id,
                     title: sessionData.title,
                     createdAt: sessionData.created_at,
-                    updatedAt: sessionData.updated_at,
+                    updatedAt: sessionData.updatedAt,
                     messageCount: sessionData.message_count,
                     messages,
                   };
@@ -650,32 +689,5 @@ export const useChatStore = create<ChatStore>()(
   )
 );
 
-// Helper function to generate mock responses
-function generateMockResponse(message: string): string {
-  const currentSession = useChatStore.getState().currentSession;
-  
-  // Check if this is an admin chat
-  if (currentSession?.isAdminChat) {
-    const adminResponses = [
-      "Hello, this is the admin. How can I assist you with this property?",
-      "Thank you for your message. As the admin, I'll help you with any questions about this property.",
-      "I'm the admin of PropertysPro. I'll be happy to provide more information about this listing.",
-      "Admin here. I can help you with all the details about this property. What would you like to know?",
-      "This is the admin. I'm here to assist you with any questions about this property or our services."
-    ];
-    return adminResponses[Math.floor(Math.random() * adminResponses.length)];
-  } else {
-    // Regular agent responses
-    const responses = [
-      "I understand you're interested in this property. What specific aspects would you like to know more about?",
-      "That's a great question! Let me help you with that.",
-      "I can provide more details about this property. What would you like to know?",
-      "I'm here to help you with any questions about this property.",
-      "Let me check the details for you.",
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  }
-}
 
 export default useChatStore;
