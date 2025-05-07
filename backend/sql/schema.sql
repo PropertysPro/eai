@@ -320,6 +320,7 @@ CREATE POLICY "Users can insert their own profile"
 COMMENT ON POLICY "Users can insert their own profile" ON profiles IS 'Allows users to insert their own profile during registration';
 
 -- Add RLS policy to allow users to read their own profile
+DROP POLICY IF EXISTS "Users can read their own profile" ON profiles;
 CREATE POLICY "Users can read their own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = id);
@@ -327,6 +328,7 @@ CREATE POLICY "Users can read their own profile"
 COMMENT ON POLICY "Users can read their own profile" ON profiles IS 'Allows users to read their own profile';
 
 -- Add RLS policy to allow users to update their own profile
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id)
