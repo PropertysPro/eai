@@ -115,7 +115,7 @@ export const updateProfile = async (updates: any): Promise<User> => {
 
     // Prepare profile update data - start with basic fields that are guaranteed to exist
     let profileUpdate: any = {
-      name: updates.name,
+      // name: updates.name, // name is updated via supabase.auth.updateUser({ data: { name: updates.name }})
       // User Preferences
       language: updates.preferences?.language || 'en',
       dark_mode: updates.preferences?.darkMode || false,
@@ -148,12 +148,30 @@ export const updateProfile = async (updates: any): Promise<User> => {
       // Realtor license fields (if user is a realtor)
       rera_license_number: updates.reraLicenseNumber || profile.rera_license_number || '',
       dld_license_number: updates.dldLicenseNumber || profile.dld_license_number || '',
-      adm_license_number: updates.admLicenseNumber || profile.adm_license_number || ''
+      adm_license_number: updates.admLicenseNumber || profile.adm_license_number || '',
+      // Ensure phone number from updates is prioritized if provided
+      phone: updates.phone !== undefined ? updates.phone : profile.phone || '',
     };
-    
+
+    // Only include name in profileUpdate if it's explicitly in updates and different from auth metadata
+    // Supabase auth.updateUser is the primary way to update user's main attributes like name
+    // However, if the 'profiles' table 'name' is meant to be independently updatable or synced,
+    // this logic might need adjustment. For now, we assume 'name' in 'profiles' is a cache/copy.
+    if (updates.name && updates.name !== profile.name) {
+      profileUpdate.name = updates.name;
+    } else if (!updates.name && profile.name) {
+      // If updates.name is not provided, keep existing profile.name
+      profileUpdate.name = profile.name;
+    }
+
+
     // Check if avatar field exists in the profile before adding it to the update
-    if ('avatar' in profile || updates.avatar) {
+    // or if updates.avatar is explicitly provided (even if null, to clear it)
+    if (updates.avatar !== undefined) {
       profileUpdate.avatar = updates.avatar;
+    } else if ('avatar' in profile) {
+      // If updates.avatar is not provided, keep existing profile.avatar
+      profileUpdate.avatar = profile.avatar;
     }
     
     // Update profile in database
@@ -268,21 +286,29 @@ export const register = async (email: string, password: string, name?: string, p
     console.log('[Auth Service] Email confirmation status:', data?.user?.email_confirmed_at ? 'Confirmed' : 'Pending confirmation');
     
     // Create user profile in the database
+    let createdProfile = null;
     if (data?.user?.id) {
       try {
-        // Set email_verified to false initially - will be updated when user confirms email
-        await createUserProfile(data.user.id, email, name, phone, roles); // Pass phone here
-        console.log('[Auth Service] User profile created successfully');
+        // createUserProfile now returns the profile data
+        createdProfile = await createUserProfile(data.user.id, email, name, phone, roles); 
+        console.log('[Auth Service] User profile created/retrieved successfully during registration:', JSON.stringify(createdProfile, null, 2));
       } catch (profileError: any) {
-        console.error('[Auth Service] Error creating user profile during registration:', profileError.message);
-        throw profileError; // Re-throw the error to make it visible
+        console.error('[Auth Service] Error creating/retrieving user profile during registration:', profileError.message);
+        // Decide if this should be a fatal error for registration
+        // For now, we'll let registration proceed but log the error. The profile might be completed later.
+        // throw profileError; 
       }
     }
-    console.log('[Auth Service] Registration data:', JSON.stringify(data, null, 2));
-    console.log('[Auth Service] Registration data:', JSON.stringify(data, null, 2));
-    console.log('[Auth Service] Registration data:', JSON.stringify(data, null, 2));
-    console.log('[Auth Service] Registration data:', JSON.stringify(data, null, 2));
-    return data;
+    
+    // Log the auth registration data and the created profile
+    console.log('[Auth Service] Supabase Auth registration data:', JSON.stringify(data, null, 2));
+    if (createdProfile) {
+      console.log('[Auth Service] Created/Upserted Profile during registration:', JSON.stringify(createdProfile, null, 2));
+    }
+
+    // The function should ideally return a consistent User object or the auth data + profile
+    // For now, returning the original Supabase auth data, but the app flow might need to use createdProfile
+    return { authData: data, profileData: createdProfile };
   } catch (error: any) {
     console.error('[Auth Service] Registration error:', error.message);
     throw error;
@@ -290,9 +316,9 @@ export const register = async (email: string, password: string, name?: string, p
 };
 
 // Create user profile in the database
-export const createUserProfile = async (userId: string, email: string, name?: string, phone?: string, roles?: string[]) => {
+export const createUserProfile = async (userId: string, email: string, name?: string, phone?: string, roles?: string[]): Promise<any> => {
   try {
-    console.log('[Auth Service] Creating user profile for:', email);
+    console.log('[Auth Service] Creating/Updating user profile for:', email, 'User ID:', userId);
     
     // First check if profile already exists with a more robust approach
     let profileExists = false;
@@ -310,106 +336,71 @@ export const createUserProfile = async (userId: string, email: string, name?: st
       // Continue with the assumption that the profile might not exist
     }
     
-    // If profile exists, update it instead of inserting
-    if (profileExists) {
-      console.log('[Auth Service] Profile already exists, updating instead of inserting');
-      
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            email,
-            name: name || email.split('@')[0],
-            role: roles && roles.length > 0 ? roles[0] : 'user',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', userId);
-        
-        if (error) {
-          console.error('[Auth Service] Error updating user profile:', error.message);
-          console.error('[Auth Service] Error details:', error);
-          throw error;
-        }
-      } catch (updateErr) {
-        console.error('[Auth Service] Exception during profile update:', updateErr);
-        throw updateErr;
-      }
+    // Upsert handles both creation and update based on conflict resolution.
+    const upsertData: any = {
+      id: userId, // Ensure id is part of the upsert data for matching
+      email,
+      name: name || email.split('@')[0],
+      role: roles && roles.length > 0 ? roles[0] : 'user', // Set role
+      subscription: 'free',
+      message_count: 0,
+      message_limit: 100,
+      updated_at: new Date().toISOString(),
+      email_verified: false, // This should be updated by a separate email verification flow
+      onboarding_completed: false,
+      language: 'en',
+      dark_mode: false,
+      biometric_auth: false,
+      notification_matches: true,
+      notification_market_updates: true,
+      notification_new_listings: true,
+      notification_subscription_updates: true,
+      property_types: [],
+      property_budget_min: 500000,
+      property_budget_max: 2000000,
+      property_bedrooms: 0,
+      property_bathrooms: 0,
+      property_locations: [],
+      location: 'Dubai, UAE',
+      currency: 'AED',
+      is_negotiable: false,
+      requesting_price: null,
+      phone: phone || '', // Ensure phone is included
+    };
+
+    // If it's a new profile (profileExists is false), set created_at.
+    // Supabase upsert might handle this if `DEFAULT NOW()` is set and it's an INSERT.
+    // However, explicitly setting it ensures it if not already existing.
+    if (!profileExists) {
+      upsertData.created_at = new Date().toISOString();
     } else {
-      // Try to insert new profile with all fields matching the new table structure
-      try {
-        const upsertData = {
-          id: userId,
-          email,
-          name: name || email.split('@')[0],
-          role: roles && roles.length > 0 ? roles[0] : 'user',
-          subscription: 'free',
-          message_count: 0,
-          message_limit: 100,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          email_verified: false,
-          onboarding_completed: false,
-          language: 'en',
-          dark_mode: false,
-          biometric_auth: false,
-          notification_matches: true,
-          notification_market_updates: true,
-          notification_new_listings: true,
-          notification_subscription_updates: true,
-          property_types: [],
-          property_budget_min: 500000,
-          property_budget_max: 2000000, // Added default max budget
-          property_bedrooms: 0,
-          property_bathrooms: 0,
-          property_locations: [],
-          location: 'Dubai, UAE',
-          currency: 'AED',
-          is_negotiable: false,
-          requesting_price: null,
-          phone: phone || ''
-        };
-        console.log('[Auth Service] Attempting to upsert profile with data:', JSON.stringify(upsertData));
-        const { error: upsertError } = await supabase
-          .from('profiles')
-          .upsert(upsertData, { onConflict: 'id' }); // Specify the conflict resolution strategy
+      // If profile exists, we don't want to overwrite created_at
+      // delete upsertData.created_at; // Or ensure it's not in the initial object for updates
+    }
+    
+    console.log('[Auth Service] Attempting to upsert profile with data:', JSON.stringify(upsertData, null, 2));
+    const { data: upsertedProfile, error: upsertError } = await supabase
+      .from('profiles')
+      .upsert(upsertData, { onConflict: 'id' })
+      .select() // Select all columns from the upserted row
+      .single(); // Expect a single row to be returned
 
-        if (upsertError) {
-          console.error('[Auth Service] Error upserting user profile:', upsertError.message, 'data:', upsertData);
-          console.error('[Auth Service] Error details:', upsertError);
-          throw upsertError;
-        }
-      } catch (insertErr) {
-        console.error('[Auth Service] Exception during profile upsert:', insertErr);
-
-        // If upsert fails, try a final update as a fallback
-        try {
-          const updateData = {
-            email,
-            name: name || email.split('@')[0],
-            role: roles && roles.length > 0 ? roles[0] : 'user',
-            updated_at: new Date().toISOString(),
-          };
-          console.log('[Auth Service] Attempting fallback update with data:', updateData);
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update(updateData)
-            .eq('id', userId);
-
-          if (updateError) {
-            console.error('[Auth Service] Error in fallback update:', updateError.message, 'data:', updateData);
-            throw updateError;
-          }
-        } catch (fallbackErr) {
-          console.error('[Auth Service] Fallback update also failed:', fallbackErr);
-          throw fallbackErr;
-        }
-      }
+    if (upsertError) {
+      console.error('[Auth Service] Error upserting user profile:', upsertError.message);
+      console.error('[Auth Service] Upsert data:', JSON.stringify(upsertData, null, 2));
+      console.error('[Auth Service] Error details:', upsertError);
+      throw upsertError;
     }
 
-    console.log('[Auth Service] User profile created/updated successfully');
-    return true;
+    if (!upsertedProfile) {
+      console.error('[Auth Service] Upserted profile data is null, though no error was thrown. This is unexpected.');
+      throw new Error('Failed to retrieve profile data after upsert.');
+    }
+
+    console.log('[Auth Service] User profile created/updated successfully via upsert:', JSON.stringify(upsertedProfile, null, 2));
+    return upsertedProfile; // Return the full profile object
   } catch (error: any) {
-    console.error('[Auth Service] Error creating/updating user profile:', error.message);
+    console.error('[Auth Service] Error in createUserProfile:', error.message);
     throw error;
   }
 };
@@ -442,46 +433,40 @@ export const login = async (email: string, password: string): Promise<User> => {
       .single();
 
     // If no profile exists, create one
-    if (profileError) {
-      console.log('[Auth Service] No profile found, creating new profile');
+    if (profileError || !profileData) { // Check for error or if profileData is null/undefined
+      console.log('[Auth Service] No profile found or error fetching profile, attempting to create/retrieve one.');
       try {
-      // Use the improved createUserProfile function that handles existing profiles
-      // This will create a profile with all the required fields for the new table structure
-      try {
-        await createUserProfile(
+        // createUserProfile now returns the profile data directly
+        const newProfile = await createUserProfile(
           session.user.id,
           session.user.email || '',
           session.user.user_metadata?.name || session.user.email?.split('@')[0]
+          // phone and roles are optional and typically not available at this stage of login
         );
-        console.log('[Auth Service] Created new profile during login');
-      } catch (createErr) {
-        console.error('[Auth Service] Error creating profile during login:', createErr);
-        throw new Error('Failed to create user profile during login');
-      }
         
-        // Fetch the newly created/updated profile
-        const { data: newProfile, error: newProfileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (newProfileError || !newProfile) {
-          throw new Error('Failed to fetch profile after creation/update');
+        if (!newProfile) {
+          // This case should ideally be handled by an error throw in createUserProfile if it fails to return data
+          console.error('[Auth Service] createUserProfile did not return a profile during login.');
+          throw new Error('Failed to create or retrieve user profile during login.');
         }
         
-        profile = newProfile;
-      } catch (err: any) {
-        console.error('[Auth Service] Error creating/updating profile during login:', err?.message || 'Unknown error');
-        // Continue with login attempt even if profile creation fails
+        profile = newProfile; // Assign the directly returned profile
+        console.log('[Auth Service] Successfully created/retrieved profile during login:', JSON.stringify(profile, null, 2));
+        
+      } catch (createOrFetchErr: any) {
+        console.error('[Auth Service] Error creating/retrieving profile during login:', createOrFetchErr.message);
+        // If profile creation/retrieval fails here, it's a critical issue for login.
+        throw new Error('Failed to get or create user profile during login.');
       }
     } else {
       profile = profileData;
-      console.log('[Auth Service] Profile data during login:', JSON.stringify(profile, null, 2));
+      console.log('[Auth Service] Profile data fetched successfully during login:', JSON.stringify(profile, null, 2));
     }
 
+    // At this point, profile should be populated. If not, something went wrong.
     if (!profile) {
-      throw new Error('Failed to get or create user profile');
+      console.error('[Auth Service] Profile is still null after attempting fetch/create. This indicates a critical failure.');
+      throw new Error('Failed to get or create user profile.');
     }
 
     // Create user object with all required fields
