@@ -8,52 +8,28 @@ export const updateProfile = async (updates: any): Promise<User> => {
   try {
     console.log('[Auth Service] Updating user profile with updates:', JSON.stringify(updates, null, 2));
     
-    // First try to get user data from storage
-    const storedUserData = await crossStorage.getItem('user_data');
-    let userId = null;
-    let userEmail = null;
-    let sessionData = null;
+    // Get current session user FIRST to ensure we operate on the correct user
+    let { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
     
-    if (storedUserData) {
-      try {
-        const storedUser = JSON.parse(storedUserData);
-        userId = storedUser.id;
-        userEmail = storedUser.email;
-        console.log('[Auth Service] Found user ID in storage:', userId);
-      } catch (e) {
-        console.error('[Auth Service] Error parsing stored user data:', e);
-      }
-    }
-    
-    // If we couldn't get the user ID from storage, try to get it from the session
-    if (!userId) {
-      // Ensure there is a valid Supabase session before updating profile
-      let { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionResult?.session) {
+      console.log('[Auth Service] No active session, attempting to refresh...');
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
-      if (sessionError || !sessionResult?.session) {
-        console.log('[Auth Service] No active session, attempting to refresh...');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError || !refreshData.session) {
-          console.error('[Auth Service] Update profile error: No valid session available');
-          throw new Error('Update profile error: Auth session missing!');
-        }
-        
-        sessionResult = refreshData;
+      if (refreshError || !refreshData.session) {
+        console.error('[Auth Service] Update profile error: No valid session available while trying to refresh.');
+        throw new Error('Update profile error: Auth session missing or could not be refreshed!');
       }
+      sessionResult = refreshData; // Use the refreshed session data
+    }
 
-      if (!sessionResult?.session?.user) {
-        throw new Error('Update profile error: No user found in session');
-      }
-      
-      userId = sessionResult.session.user.id;
-      userEmail = sessionResult.session.user.email || '';
-      sessionData = sessionResult;
+    if (!sessionResult?.session?.user) {
+      throw new Error('Update profile error: No user found in active session');
     }
     
-    if (!userId) {
-      throw new Error('Update profile error: Could not determine user ID');
-    }
+    const userId = sessionResult.session.user.id;
+    const userEmail = sessionResult.session.user.email || ''; // Email from the current session
+    // sessionData can be sessionResult if needed later, e.g., for email_verified status
+    const sessionData = sessionResult; 
 
     // Update user metadata in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.updateUser({
@@ -87,26 +63,21 @@ export const updateProfile = async (updates: any): Promise<User> => {
     }
 
     if (!profile) {
-      // If profile is null, it means no profile was found for the userId. Create it now.
-      console.log(`[Auth Service] Profile not found for user ID: ${userId}. Creating new profile.`);
+      // If profile is null, it means no profile was found for the session userId. Create it now.
+      console.log(`[Auth Service] Profile not found for user ID: ${userId} (from session). Creating new profile.`);
       try {
-        await createUserProfile(userId, userEmail || '', updates.name); // Use email from session/storage
-        // Re-fetch the profile after creation
-        const { data: newProfile, error: newProfileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single(); // Expecting it to exist now
+        // Use userId and userEmail from the current session. updates.name and updates.phone come from the form.
+        // createUserProfile now returns the created profile.
+        const newlyCreatedProfile = await createUserProfile(userId, userEmail, updates.name, updates.phone);
 
-        if (newProfileError) {
-          console.error('[Auth Service] Error fetching profile after creation:', newProfileError.message);
-          throw newProfileError;
+        if (!newlyCreatedProfile) {
+          // This case should ideally be handled by an error throw in createUserProfile if it fails to return data
+          console.error(`[Auth Service] createUserProfile did not return a profile for user ID ${userId}.`);
+          throw new Error(`[Auth Service] Failed to create or retrieve profile for user ID ${userId} after attempting creation.`);
         }
-        if (!newProfile) {
-          throw new Error(`[Auth Service] Failed to fetch profile for user ID ${userId} even after attempting creation.`);
-        }
-        profile = newProfile; // Assign the newly created profile
-        console.log(`[Auth Service] Successfully created and fetched new profile for user ID: ${userId}.`);
+        
+        profile = newlyCreatedProfile; // Assign the newly created profile
+        console.log(`[Auth Service] Successfully created and fetched new profile for user ID: ${userId}. Profile:`, JSON.stringify(profile, null, 2));
       } catch (creationError: any) {
         console.error(`[Auth Service] Error during profile creation for user ID ${userId}:`, creationError.message);
         throw creationError;
