@@ -75,15 +75,42 @@ export const updateProfile = async (updates: any): Promise<User> => {
     };
 
     // Get current profile data
-    const { data: profile, error: profileError } = await supabase
+    let { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle(); 
       
-    if (profileError) {
-      console.error('[Auth Service] Error fetching current profile:', profileError.message);
-      throw profileError;
+    if (fetchError) {
+      console.error('[Auth Service] Database error while fetching initial profile:', fetchError.message);
+      throw fetchError;
+    }
+
+    if (!profile) {
+      // If profile is null, it means no profile was found for the userId. Create it now.
+      console.log(`[Auth Service] Profile not found for user ID: ${userId}. Creating new profile.`);
+      try {
+        await createUserProfile(userId, userEmail || '', updates.name); // Use email from session/storage
+        // Re-fetch the profile after creation
+        const { data: newProfile, error: newProfileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single(); // Expecting it to exist now
+
+        if (newProfileError) {
+          console.error('[Auth Service] Error fetching profile after creation:', newProfileError.message);
+          throw newProfileError;
+        }
+        if (!newProfile) {
+          throw new Error(`[Auth Service] Failed to fetch profile for user ID ${userId} even after attempting creation.`);
+        }
+        profile = newProfile; // Assign the newly created profile
+        console.log(`[Auth Service] Successfully created and fetched new profile for user ID: ${userId}.`);
+      } catch (creationError: any) {
+        console.error(`[Auth Service] Error during profile creation for user ID ${userId}:`, creationError.message);
+        throw creationError;
+      }
     }
 
     // Prepare profile update data - start with basic fields that are guaranteed to exist
@@ -135,15 +162,20 @@ export const updateProfile = async (updates: any): Promise<User> => {
       .update(profileUpdate)
       .eq('id', userId)
       .select()
-      .single();
+      .maybeSingle(); // Changed to maybeSingle() for robustness
       
     if (updateError) {
-      console.error('[Auth Service] Error updating profile:', updateError.message);
+      // This handles actual database errors during the update.
+      console.error('[Auth Service] Database error while updating profile:', updateError.message);
       throw updateError;
     }
     
     if (!updatedProfile) {
-      throw new Error('Failed to update profile');
+      // If updatedProfile is null, it means the update operation did not return the expected row.
+      // This could be due to RLS or other unexpected issues.
+      const errorMessage = `Failed to retrieve profile after update for user ID: ${userId}. The update may have failed or the row is not accessible.`;
+      console.error(`[Auth Service] ${errorMessage}`);
+      throw new Error(errorMessage);
     }
     
     // Create user object with updated data
