@@ -679,8 +679,8 @@ export const useChatStore = create<ChatStore>()(
           createdAt: session.createdAt,
           updatedAt: session.updatedAt,
           messageCount: session.messageCount,
-          // Limit stored messages to just the last one for context
-          messages: session.messages.length > 0 ? [session.messages[session.messages.length - 1]] : []
+          // Persist all messages for offline access
+          messages: session.messages 
         })),
         // Don't persist currentSession as it will be loaded when needed
         // currentSession: null

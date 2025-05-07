@@ -44,13 +44,5 @@
       }
     },
     "owner": "propertyspro"
-  },
-  "developmentClient": {
-    "ios": {
-      "bundleIdentifier": "com.propertyspro.realestate.devclient"
-    },
-    "android": {
-      "package": "com.yourcompany.realestate.devclient"
-    }
   }
 }

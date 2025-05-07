@@ -6,7 +6,6 @@ export default {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    manifest: 'exp://nx7nqsa-propertyspro-8081.exp.direct',
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',

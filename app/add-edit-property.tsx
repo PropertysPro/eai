@@ -99,40 +99,40 @@ export default function AddEditPropertyScreen() {
     : null;
 
   // City state
-  const [city, setCity] = useState(existingProperty?.location?.split(',')[0]?.trim() || '');
+  const [city, setCity] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const cities = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Umm Al Quwain'];
   
   // Form state
-  const [title, setTitle] = useState(existingProperty?.title || '');
-  const [description, setDescription] = useState(existingProperty?.description || '');
-  const [price, setPrice] = useState(existingProperty?.price?.toString() || '');
-  const [location, setLocation] = useState(existingProperty?.location || '');
-  const [bedrooms, setBedrooms] = useState(existingProperty?.bedrooms?.toString() || '0');
-  const [bathrooms, setBathrooms] = useState(existingProperty?.bathrooms?.toString() || '0');
-  const [area, setArea] = useState(existingProperty?.area?.toString() || '');
-  const [area_unit, setAreaUnit] = useState<'sqft' | 'sqm'>(existingProperty?.area_unit || 'sqft');
-  const [propertyType, setPropertyType] = useState<PropertyType>(existingProperty?.type || 'apartment');
-  const [listingType, setListingType] = useState<'sale' | 'rent'>(existingProperty?.listingType || 'sale');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [location, setLocation] = useState('');
+  const [bedrooms, setBedrooms] = useState('0');
+  const [bathrooms, setBathrooms] = useState('0');
+  const [area, setArea] = useState('');
+  const [area_unit, setAreaUnit] = useState<'sqft' | 'sqm'>('sqft');
+  const [propertyType, setPropertyType] = useState<PropertyType>('apartment');
+  const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
   const [showListingTypeDropdown, setShowListingTypeDropdown] = useState(false);
   const listingTypes: ('sale' | 'rent')[] = ['sale', 'rent'];
-  const [features, setFeatures] = useState<string[]>(existingProperty?.features || []);
+  const [features, setFeatures] = useState<string[]>([]);
   const [newFeature, setNewFeature] = useState('');
-  const [isNegotiable, setIsNegotiable] = useState(existingProperty?.isNegotiable || false);
-  const [isDistressed, setIsDistressed] = useState(existingProperty?.isDistressed || false);
-  const [distressReason, setDistressReason] = useState(existingProperty?.distressReason || '');
-  const [originalPrice, setOriginalPrice] = useState(existingProperty?.originalPrice?.toString() || '');
-  const [discountPercentage, setDiscountPercentage] = useState(existingProperty?.discountPercentage?.toString() || '');
-  const [images, setImages] = useState<string[]>(existingProperty?.images || []);
+  const [isNegotiable, setIsNegotiable] = useState(false);
+  const [isDistressed, setIsDistressed] = useState(false);
+  const [distressReason, setDistressReason] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [discountPercentage, setDiscountPercentage] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showBedroomsDropdown, setShowBedroomsDropdown] = useState(false);
   const [showBathroomsDropdown, setShowBathroomsDropdown] = useState(false);
-  const [ownerName, setOwnerName] = useState(existingProperty?.ownerName || '');
+  const [ownerName, setOwnerName] = useState('');
   
   // Marketplace listing state
-  const [listInMarketplace, setListInMarketplace] = useState(existingProperty?.isInMarketplace || false);
-  const [marketplacePrice, setMarketplacePrice] = useState(existingProperty?.marketplacePrice?.toString() || '');
-  const [marketplaceDuration, setMarketplaceDuration] = useState(existingProperty?.marketplaceDuration?.toString() || '30'); // Default 30 days
+  const [listInMarketplace, setListInMarketplace] = useState(false);
+  const [marketplacePrice, setMarketplacePrice] = useState('');
+  const [marketplaceDuration, setMarketplaceDuration] = useState('30'); // Default 30 days
   const [showMarketplaceDurationDropdown, setShowMarketplaceDurationDropdown] = useState(false);
   const marketplaceDurations = ['7', '14', '30', '60', '90'];
   
@@ -141,12 +141,44 @@ export default function AddEditPropertyScreen() {
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   
   // Distressed property state
-  const [urgency, setUrgency] = useState<'high' | 'medium' | 'low'>(existingProperty?.urgency || 'high');
+  const [urgency, setUrgency] = useState<'high' | 'medium' | 'low'>('high');
   const [showUrgencyDropdown, setShowUrgencyDropdown] = useState(false);
-  const [estimatedValue, setEstimatedValue] = useState(existingProperty?.estimatedValue?.toString() || '');
-  const [potentialROI, setPotentialROI] = useState(existingProperty?.potentialROI?.toString() || '');
-  const [marketTrend, setMarketTrend] = useState<'up' | 'down' | 'stable'>(existingProperty?.marketTrend || 'stable');
+  const [estimatedValue, setEstimatedValue] = useState('');
+  const [potentialROI, setPotentialROI] = useState('');
+  const [marketTrend, setMarketTrend] = useState<'up' | 'down' | 'stable'>('stable');
   const [showMarketTrendDropdown, setShowMarketTrendDropdown] = useState(false);
+
+  // Effect to populate form when existingProperty is available
+  useEffect(() => {
+    if (existingProperty) {
+      setTitle(existingProperty.title || '');
+      setDescription(existingProperty.description || '');
+      setPrice(existingProperty.price?.toString() || '');
+      setLocation(existingProperty.location || '');
+      setCity(existingProperty.location?.split(',')[0]?.trim() || '');
+      setBedrooms(existingProperty.bedrooms?.toString() || '0');
+      setBathrooms(existingProperty.bathrooms?.toString() || '0');
+      setArea(existingProperty.area?.toString() || '');
+      setAreaUnit(existingProperty.area_unit || 'sqft');
+      setPropertyType(existingProperty.type || 'apartment');
+      setListingType(existingProperty.listingType || 'sale');
+      setFeatures(existingProperty.features || []);
+      setIsNegotiable(existingProperty.isNegotiable || false);
+      setIsDistressed(existingProperty.isDistressed || false);
+      setDistressReason(existingProperty.distressReason || '');
+      setOriginalPrice(existingProperty.originalPrice?.toString() || '');
+      setDiscountPercentage(existingProperty.discountPercentage?.toString() || '');
+      setImages(existingProperty.images || []);
+      setOwnerName(existingProperty.ownerName || '');
+      setListInMarketplace(existingProperty.isInMarketplace || false);
+      setMarketplacePrice(existingProperty.marketplacePrice?.toString() || '');
+      setMarketplaceDuration(existingProperty.marketplaceDuration?.toString() || '30');
+      setUrgency(existingProperty.urgency || 'high');
+      setEstimatedValue(existingProperty.estimatedValue?.toString() || '');
+      setPotentialROI(existingProperty.potentialROI?.toString() || '');
+      setMarketTrend(existingProperty.marketTrend || 'stable');
+    }
+  }, [existingProperty]);
 
   // Animation and keyboard effects
   useEffect(() => {
