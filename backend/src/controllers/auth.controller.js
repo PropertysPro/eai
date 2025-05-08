@@ -1,13 +1,5 @@
-import User from '../models/User';
-import jwt from 'jsonwebtoken';
+import supabase from '../config/supabase.js';
 import { validationResult } from 'express-validator';
-
-// Generate JWT token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
-  });
-};
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -21,34 +13,30 @@ export const register = async (req, res, next) => {
 
     const { name, email, password, phone } = req.body;
 
-    // Check if user already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    // Create user
-    const user = await User.create({
-      name,
+    // Register user in Supabase Auth
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      phone
+      email_confirm: false,
+      user_metadata: {
+        name,
+        phone
+      }
     });
 
-    // Generate token
-    const token = generateToken(user._id);
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    // Optionally, you can insert into a profiles table here if needed
 
     res.status(201).json({
-      token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        profileImage: user.profileImage,
-        preferences: user.preferences,
-        subscription: user.subscription,
-        role: user.role
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name,
+        phone: data.user.user_metadata?.phone,
+        email_confirmed: data.user.email_confirmed_at ? true : false
       }
     });
   } catch (error) {
@@ -68,32 +56,25 @@ export const login = async (req, res, next) => {
 
     const { email, password } = req.body;
 
-    // Check if user exists
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+    // Authenticate user with Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-    // Check if password matches
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    if (error) {
+      return res.status(401).json({ message: error.message });
     }
-
-    // Generate token
-    const token = generateToken(user._id);
 
     res.status(200).json({
-      token,
+      access_token: data.session?.access_token,
+      refresh_token: data.session?.refresh_token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        profileImage: user.profileImage,
-        preferences: user.preferences,
-        subscription: user.subscription,
-        role: user.role
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name,
+        phone: data.user.user_metadata?.phone,
+        email_confirmed: data.user.email_confirmed_at ? true : false
       }
     });
   } catch (error) {
@@ -106,21 +87,26 @@ export const login = async (req, res, next) => {
 // @access  Private
 export const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    // Expecting access token in Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+    const token = authHeader.split(' ')[1];
+
+    // Get user from Supabase using the access token
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data.user) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
     }
 
     res.status(200).json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      profileImage: user.profileImage,
-      preferences: user.preferences,
-      subscription: user.subscription,
-      role: user.role
+      id: data.user.id,
+      email: data.user.email,
+      name: data.user.user_metadata?.name,
+      phone: data.user.user_metadata?.phone,
+      email_confirmed: data.user.email_confirmed_at ? true : false
     });
   } catch (error) {
     next(error);
