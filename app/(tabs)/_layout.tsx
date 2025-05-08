@@ -71,6 +71,18 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="saved"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="account"
         options={{
           title: 'Account',
