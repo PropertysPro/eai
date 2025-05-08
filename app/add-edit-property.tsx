@@ -147,6 +147,11 @@ export default function AddEditPropertyScreen() {
   const [potentialROI, setPotentialROI] = useState('');
   const [marketTrend, setMarketTrend] = useState<'up' | 'down' | 'stable'>('stable');
   const [showMarketTrendDropdown, setShowMarketTrendDropdown] = useState(false);
+  // New state for construction and market status
+  const [construction_status, setConstructionStatus] = useState<'ready' | 'off_plan'>('ready');
+  const [market_status, setMarketStatus] = useState<'new_to_market' | 'resale'>('resale');
+  const [showConstructionStatusDropdown, setShowConstructionStatusDropdown] = useState(false);
+  const [showMarketStatusDropdown, setShowMarketStatusDropdown] = useState(false);
 
   // Effect to populate form when existingProperty is available
   useEffect(() => {
@@ -177,6 +182,9 @@ export default function AddEditPropertyScreen() {
       setEstimatedValue(existingProperty.estimatedValue?.toString() || '');
       setPotentialROI(existingProperty.potentialROI?.toString() || '');
       setMarketTrend(existingProperty.marketTrend || 'stable');
+      // Populate new status fields
+      setConstructionStatus(existingProperty.construction_status || 'ready');
+      setMarketStatus(existingProperty.market_status || 'resale');
     }
   }, [existingProperty]);
 
@@ -522,6 +530,9 @@ export default function AddEditPropertyScreen() {
         potentialROI: isDistressed ? parseFloat(potentialROI) : undefined,
         marketTrend: isDistressed ? marketTrend : undefined,
         isNegotiable: isNegotiable,
+        // Add new status fields to saved data
+        construction_status: construction_status,
+        market_status: market_status,
         currency: 'AED',
         status: 'available' as const,
         created_at: new Date().toISOString(),
@@ -588,6 +599,8 @@ export default function AddEditPropertyScreen() {
     setShowUrgencyDropdown(false);
     setShowMarketTrendDropdown(false);
     setShowMarketplaceDurationDropdown(false);
+    setShowConstructionStatusDropdown(false); // Close new dropdowns
+    setShowMarketStatusDropdown(false); // Close new dropdowns
   };
   
   // Render form sections
@@ -1046,6 +1059,84 @@ export default function AddEditPropertyScreen() {
             thumbColor={isNegotiable ? Colors.primary : Colors.textLight}
           />
         </View>
+      </View>
+
+      {/* Construction Status */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Construction Status</Text>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => {
+            closeAllDropdowns();
+            setShowConstructionStatusDropdown(!showConstructionStatusDropdown);
+          }}
+        >
+          <Text style={styles.dropdownButtonText}>{construction_status === 'ready' ? 'Ready' : 'Off Plan'}</Text>
+          <ChevronDown size={20} color={Colors.text} />
+        </TouchableOpacity>
+        {showConstructionStatusDropdown && (
+          <View style={styles.dropdownMenu}>
+            {(['ready', 'off_plan'] as const).map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setConstructionStatus(status);
+                  setShowConstructionStatusDropdown(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  construction_status === status && styles.dropdownItemTextSelected
+                ]}>
+                  {status === 'ready' ? 'Ready' : 'Off Plan'}
+                </Text>
+                {construction_status === status && (
+                  <CheckCircle size={16} color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Market Status */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Market Status</Text>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => {
+            closeAllDropdowns();
+            setShowMarketStatusDropdown(!showMarketStatusDropdown);
+          }}
+        >
+          <Text style={styles.dropdownButtonText}>{market_status === 'new_to_market' ? 'New to Market' : 'Resale'}</Text>
+          <ChevronDown size={20} color={Colors.text} />
+        </TouchableOpacity>
+        {showMarketStatusDropdown && (
+          <View style={styles.dropdownMenu}>
+            {(['new_to_market', 'resale'] as const).map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setMarketStatus(status);
+                  setShowMarketStatusDropdown(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  market_status === status && styles.dropdownItemTextSelected
+                ]}>
+                  {status === 'new_to_market' ? 'New to Market' : 'Resale'}
+                </Text>
+                {market_status === status && (
+                  <CheckCircle size={16} color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Marketplace Listing */}

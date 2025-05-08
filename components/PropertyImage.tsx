@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Image, ImageResizeMode } from 'react-native'; // Import standard Image
 import { colors as Colors } from '@/constants/colors';
-import { Image as CachedImage, ImageContentFit } from 'expo-image';
+// import { Image as CachedImage, ImageContentFit } from 'expo-image'; // Comment out expo-image
 
 interface PropertyImageProps {
   uri: string;
   style?: any;
-  resizeMode?: ImageContentFit;
+  resizeMode?: ImageResizeMode; // Use standard resizeMode
 }
 
 export const PropertyImage: React.FC<PropertyImageProps> = ({
   uri,
   style,
-  resizeMode = 'cover',
+  resizeMode = 'cover', // Default for standard Image
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -21,16 +21,15 @@ export const PropertyImage: React.FC<PropertyImageProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <CachedImage
+      <Image // Use standard Image
         source={{ uri: error ? fallbackImage : uri }}
         style={[styles.image, style]}
-        contentFit={resizeMode}
-        transition={200}
+        resizeMode={resizeMode} // Use standard prop
         onLoadStart={() => setIsLoading(true)}
         onLoadEnd={() => setIsLoading(false)}
         onError={() => setError(true)}
-        cachePolicy="memory-disk"
       />
+      {/* Keep loading indicator */}
       {isLoading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color={Colors.primary} />
@@ -43,7 +42,7 @@ export const PropertyImage: React.FC<PropertyImageProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background, // Keep background for loading state
   },
   image: {
     width: '100%',
@@ -53,6 +52,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background, // Or a semi-transparent overlay
   },
-}); 
+});

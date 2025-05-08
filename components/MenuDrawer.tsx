@@ -30,6 +30,7 @@ import {
   Bell,
   ShoppingBag,
   Wallet,
+  Store, // Added Store icon
 } from 'lucide-react-native';
 import { colors as Colors } from '@/constants/colors';
 import { useAuth } from '@/context/auth-context';
@@ -191,6 +192,12 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
               icon={<Search size={22} color={Colors.text} />}
               label="Discover Properties"
               onPress={() => handleNavigation('/(tabs)/discover')}
+            />
+
+            <MenuItem
+              icon={<Store size={22} color={Colors.text} />}
+              label="Properties Market"
+              onPress={() => handleNavigation('/(tabs)/properties-market')}
             />
             
             {isAuthenticated && (

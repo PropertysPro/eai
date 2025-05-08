@@ -41,6 +41,32 @@ export interface User {
   reraLicenseNumber?: string;
   dldLicenseNumber?: string;
   admLicenseNumber?: string;
+
+  // Realtor/Seller specific profile information
+  city?: string; // City they primarily work in
+  experienceYears?: number; // Years of experience
+  specialties?: string[]; // Areas of expertise, e.g., ["Luxury Villas", "Commercial Real Estate"]
+  languagesSpoken?: string[]; // e.g., ["English", "Arabic"]
+  bio?: string; // Short biography
+
+  // Reviews and Ratings
+  averageRating?: number; // Calculated average rating
+  reviewCount?: number; // Total number of reviews
+  reviews?: Review[]; // Array of reviews
+
+  // Visibility request for Properties Market
+  // request_properties_market_visibility?: boolean; // Replaced by status field
+  properties_market_status?: 'not_requested' | 'pending_approval' | 'approved' | 'rejected';
+}
+
+export interface Review {
+  id: string;
+  reviewerId: string;
+  reviewerName: string;
+  reviewerAvatar?: string;
+  rating: number; // e.g., 1-5
+  comment?: string;
+  createdAt: string;
 }
 
 export interface UserPreferences {

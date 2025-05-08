@@ -57,6 +57,9 @@ export interface Property {
   marketplacePrice?: number;
   marketplaceListingDate?: string;
   marketplaceDuration?: number;
+  // New status fields
+  construction_status?: 'ready' | 'off_plan';
+  market_status?: 'new_to_market' | 'resale';
   inquiries?: {
     id: string;
     userId: string;

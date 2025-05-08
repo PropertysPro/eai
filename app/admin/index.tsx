@@ -40,10 +40,12 @@ import {
   Lock,
   User,
   Shield,
-  CreditCard
+  CreditCard,
+  Eye // Added Eye icon for visibility requests
 } from 'lucide-react-native';
 import { colors as Colors } from '@/constants/colors';
 import { useNotifications } from '@/store/notification-store';
+import { useRouter } from 'expo-router'; // Import useRouter
 import { useSupportStore } from '@/store/support-store';
 import * as authService from '@/services/auth-service';
 import { User as UserType } from '@/types/user';
@@ -191,6 +193,7 @@ const defaultAdminUser: UserType = {
 };
 
 export default function AdminPanel() {
+  const router = useRouter(); // Initialize router
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [aiResponseTime, setAiResponseTime] = useState(1.5);
@@ -819,7 +822,26 @@ export default function AdminPanel() {
             style={styles.alertButton}
             onPress={() => setActiveTab('properties')}
           >
-            <Text style={styles.alertButtonText}>Review Now</Text>
+            <Text style={styles.alertButtonText}>Review Deals</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Realtor Visibility Requests Card */}
+      <View style={[styles.alertSection, { backgroundColor: 'rgba(98, 0, 238, 0.05)'}]}>
+         <View style={styles.alertHeader}>
+          <Eye size={20} color={Colors.primary} />
+          <Text style={[styles.alertTitle, { color: Colors.primary }]}>Visibility Requests</Text>
+        </View>
+        <View style={styles.alertContent}>
+          {/* TODO: Fetch actual count of pending requests. Using placeholder 0 for now. */}
+          <Text style={[styles.alertCount, { color: Colors.primary }]}>0</Text> 
+          <Text style={styles.alertText}>Realtors/Sellers Pending Market Visibility</Text>
+          <TouchableOpacity 
+            style={styles.alertButton}
+            onPress={() => router.push('/admin/realtor-visibility')} // Navigate to the new page
+          >
+            <Text style={styles.alertButtonText}>Review Requests</Text>
           </TouchableOpacity>
         </View>
       </View>
