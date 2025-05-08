@@ -1,0 +1,22 @@
+<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern gradient background -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7000ff" />
+      <stop offset="100%" stop-color="#a64dff" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main shape - clean and minimal - moved up -->
+  <path d="M150,50 L220,100 L220,160 L150,210 L80,160 L80,100 Z" fill="url(#gradient)" />
+  
+  <!-- Abstract geometric element - moved up -->
+  <circle cx="150" cy="130" r="30" fill="#ffffff" fill-opacity="0.9" />
+  <circle cx="150" cy="130" r="20" fill="#7000ff" />
+  
+  <!-- Modern wordmark - positioned below without overlap -->
+  <text x="150" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="36" fill="#333333">CEM AI</text>
+  
+  <!-- Script-style tagline matching splash page -->
+  <text x="150" y="275" text-anchor="middle" font-family="cursive, serif" font-style="italic" font-size="16" fill="#666666">Buy Sell Intelligently</text>
+</svg>
