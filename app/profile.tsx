@@ -78,7 +78,14 @@ export default function ProfileScreen() {
     specialties: [] as string[],
     languagesSpoken: [] as string[],
     bio: '',
-    properties_market_status: 'not_requested' as 'not_requested' | 'pending_approval' | 'approved' | 'rejected', 
+    properties_market_status: 'not_requested' as 'not_requested' | 'pending_approval' | 'approved' | 'rejected',
+    // Social media fields
+    linkedin_url: '',
+    youtube_url: '',
+    whatsapp_number: '',
+    tiktok_url: '',
+    instagram_url: '',
+    snapchat_username: '',
   });
 
   // Mock reviews for display
@@ -162,6 +169,13 @@ export default function ProfileScreen() {
         languagesSpoken: user.languagesSpoken || [],
         bio: user.bio || '',
         properties_market_status: user.properties_market_status || 'not_requested',
+        // Social media fields
+        linkedin_url: user.linkedin_url || '',
+        youtube_url: user.youtube_url || '',
+        whatsapp_number: user.whatsapp_number || '',
+        tiktok_url: user.tiktok_url || '',
+        instagram_url: user.instagram_url || '',
+        snapchat_username: user.snapchat_username || '',
       });
     }
   }, [user]);
@@ -220,8 +234,15 @@ export default function ProfileScreen() {
         updateData.specialties = formData.specialties;
         updateData.languagesSpoken = formData.languagesSpoken;
         updateData.bio = formData.bio;
+        // Social media fields
+        updateData.linkedin_url = formData.linkedin_url;
+        updateData.youtube_url = formData.youtube_url;
+        updateData.whatsapp_number = formData.whatsapp_number;
+        updateData.tiktok_url = formData.tiktok_url;
+        updateData.instagram_url = formData.instagram_url;
+        updateData.snapchat_username = formData.snapchat_username;
         // Save the current status, actual request handled separately by handleRequestVisibility
-        updateData.properties_market_status = formData.properties_market_status; 
+        updateData.properties_market_status = formData.properties_market_status;
       }
       console.log('[Profile] Prepared update data:', JSON.stringify(updateData, null, 2));
       const updatedUser = await updateProfile(updateData);
@@ -481,6 +502,44 @@ export default function ProfileScreen() {
               <Text style={styles.sectionLabel}>Languages Spoken (comma-separated)</Text>
               <View style={styles.inputContainer}>
                 <TextInput style={styles.input} value={formData.languagesSpoken.join(', ')} onChangeText={(text) => setFormData(prev => ({ ...prev, languagesSpoken: text.split(',').map(s => s.trim()).filter(s => s) }))} placeholder="e.g., English, Arabic" placeholderTextColor={Colors.input.placeholder} />
+              </View>
+            </View>
+
+            {/* Social Media Links */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>LinkedIn Profile URL</Text>
+              <View style={styles.inputContainer}>
+                <TextInput style={styles.input} value={formData.linkedin_url} onChangeText={(text) => setFormData(prev => ({ ...prev, linkedin_url: text }))} placeholder="Enter LinkedIn URL (optional)" placeholderTextColor={Colors.input.placeholder} textContentType="URL" keyboardType="url" />
+              </View>
+            </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>YouTube Channel URL</Text>
+              <View style={styles.inputContainer}>
+                <TextInput style={styles.input} value={formData.youtube_url} onChangeText={(text) => setFormData(prev => ({ ...prev, youtube_url: text }))} placeholder="Enter YouTube URL (optional)" placeholderTextColor={Colors.input.placeholder} textContentType="URL" keyboardType="url" />
+              </View>
+            </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>WhatsApp Number</Text>
+              <View style={styles.inputContainer}>
+                <TextInput style={styles.input} value={formData.whatsapp_number} onChangeText={(text) => setFormData(prev => ({ ...prev, whatsapp_number: text }))} placeholder="Enter WhatsApp number (optional)" placeholderTextColor={Colors.input.placeholder} keyboardType="phone-pad" />
+              </View>
+            </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>TikTok Profile URL</Text>
+              <View style={styles.inputContainer}>
+                <TextInput style={styles.input} value={formData.tiktok_url} onChangeText={(text) => setFormData(prev => ({ ...prev, tiktok_url: text }))} placeholder="Enter TikTok URL (optional)" placeholderTextColor={Colors.input.placeholder} textContentType="URL" keyboardType="url" />
+              </View>
+            </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Instagram Profile URL</Text>
+              <View style={styles.inputContainer}>
+                <TextInput style={styles.input} value={formData.instagram_url} onChangeText={(text) => setFormData(prev => ({ ...prev, instagram_url: text }))} placeholder="Enter Instagram URL (optional)" placeholderTextColor={Colors.input.placeholder} textContentType="URL" keyboardType="url" />
+              </View>
+            </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Snapchat Username</Text>
+              <View style={styles.inputContainer}>
+                <TextInput style={styles.input} value={formData.snapchat_username} onChangeText={(text) => setFormData(prev => ({ ...prev, snapchat_username: text }))} placeholder="Enter Snapchat username (optional)" placeholderTextColor={Colors.input.placeholder} />
               </View>
             </View>
 

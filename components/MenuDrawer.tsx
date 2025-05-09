@@ -284,6 +284,12 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
                   label="Profile"
                   onPress={() => handleNavigation('/profile')}
                 />
+
+                <MenuItem
+                  icon={<User size={22} color={Colors.text} />}
+                  label="My Public Profile"
+                  onPress={() => handleNavigation(user ? `/public-profile?userId=${user.id}` : '/auth/login')}
+                />
                 
                 <MenuItem 
                   icon={<Sparkles size={22} color={Colors.text} />}

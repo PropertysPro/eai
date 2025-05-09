@@ -52,6 +52,7 @@ export default function RealtorProfileCompletionHandlerScreen() {
         }
 
         const stashedData = JSON.parse(stashedDataString);
+        console.log('[RealtorProfileCompletionHandler] Stashed data retrieved:', stashedData); // Log stashed data
         let uploadedAvatarUrl = user.avatar; // Default to current avatar
 
         // 1. Upload avatar if a new one was picked

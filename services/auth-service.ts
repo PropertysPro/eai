@@ -116,6 +116,14 @@ export const updateProfile = async (updates: any): Promise<User> => {
       bio: updates.bio !== undefined ? updates.bio : profile.bio,
       properties_market_status: updates.properties_market_status !== undefined ? updates.properties_market_status : profile.properties_market_status,
       
+      // Social media fields
+      linkedin_url: updates.linkedin_url !== undefined ? updates.linkedin_url : profile.linkedin_url,
+      youtube_url: updates.youtube_url !== undefined ? updates.youtube_url : profile.youtube_url,
+      whatsapp_number: updates.whatsapp_number !== undefined ? updates.whatsapp_number : profile.whatsapp_number,
+      tiktok_url: updates.tiktok_url !== undefined ? updates.tiktok_url : profile.tiktok_url,
+      instagram_url: updates.instagram_url !== undefined ? updates.instagram_url : profile.instagram_url,
+      snapchat_username: updates.snapchat_username !== undefined ? updates.snapchat_username : profile.snapchat_username,
+
       phone: updates.phone !== undefined ? updates.phone : profile.phone,
       country: updates.country !== undefined ? updates.country : profile.country,
       subscription: updates.subscription !== undefined ? updates.subscription : profile.subscription,
@@ -200,6 +208,13 @@ export const updateProfile = async (updates: any): Promise<User> => {
       languagesSpoken: updatedProfile.languages_spoken || [],
       bio: updatedProfile.bio || '',
       properties_market_status: updatedProfile.properties_market_status || 'not_requested',
+      // Social media fields
+      linkedin_url: updatedProfile.linkedin_url || '',
+      youtube_url: updatedProfile.youtube_url || '',
+      whatsapp_number: updatedProfile.whatsapp_number || '',
+      tiktok_url: updatedProfile.tiktok_url || '',
+      instagram_url: updatedProfile.instagram_url || '',
+      snapchat_username: updatedProfile.snapchat_username || '',
     };
     
     await crossStorage.setItem('user_data', JSON.stringify(user));
@@ -321,6 +336,13 @@ export const createUserProfile = async (userId: string, email: string, name?: st
       languages_spoken: [],
       bio: '',
       properties_market_status: 'not_requested',
+      // Social media fields
+      linkedin_url: '',
+      youtube_url: '',
+      whatsapp_number: '',
+      tiktok_url: '',
+      instagram_url: '',
+      snapchat_username: '',
     };
 
     if (!profileExists) {
@@ -453,6 +475,13 @@ export const login = async (email: string, password: string): Promise<User> => {
       languagesSpoken: profile.languages_spoken || [],
       bio: profile.bio || '',
       properties_market_status: profile.properties_market_status || 'not_requested',
+      // Social media fields
+      linkedin_url: profile.linkedin_url || '',
+      youtube_url: profile.youtube_url || '',
+      whatsapp_number: profile.whatsapp_number || '',
+      tiktok_url: profile.tiktok_url || '',
+      instagram_url: profile.instagram_url || '',
+      snapchat_username: profile.snapchat_username || '',
     };
 
     await crossStorage.setItem('user_data', JSON.stringify(user));
@@ -1019,6 +1048,13 @@ export const completeOnboarding = async (): Promise<User> => {
       languagesSpoken: updatedProfile.languages_spoken || [],
       bio: updatedProfile.bio || '',
       properties_market_status: updatedProfile.properties_market_status || 'not_requested',
+      // Social media fields
+      linkedin_url: updatedProfile.linkedin_url || '',
+      youtube_url: updatedProfile.youtube_url || '',
+      whatsapp_number: updatedProfile.whatsapp_number || '',
+      tiktok_url: updatedProfile.tiktok_url || '',
+      instagram_url: updatedProfile.instagram_url || '',
+      snapchat_username: updatedProfile.snapchat_username || '',
     };
 
     await crossStorage.setItem('user_data', JSON.stringify(user));
@@ -1077,5 +1113,110 @@ export const uploadProfilePicture = async (userId: string, uri: string): Promise
   } catch (error: any) {
     console.error('[Auth Service] General error in uploadProfilePicture (e.g., network, blob conversion):', error.message);
     return null; 
+  }
+};
+
+// Get user profile by ID (for public profiles)
+export const getUserById = async (userId: string): Promise<User | null> => {
+  try {
+    console.log('[Auth Service] Getting user profile by ID:', userId);
+    
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (profileError) {
+      console.error('[Auth Service] Error getting user profile by ID:', profileError.message);
+      // If error is 'PGRST116', it means no rows found, which is a valid case for a non-existent user.
+      if (profileError.code === 'PGRST116') {
+        return null;
+      }
+      throw profileError;
+    }
+
+    if (!profileData) {
+      console.log('[Auth Service] No profile found for user ID:', userId);
+      return null;
+    }
+
+    // We need the email from the auth.users table if it's not in profiles or to confirm it
+    // However, for a public profile, we might not want to expose the email directly unless intended.
+    // For now, we'll use the email from profiles if available, otherwise leave it blank or use a placeholder.
+    // If email is critical and not in profiles, an additional query to auth.users might be needed,
+    // but that table is typically restricted.
+
+    const user: User = {
+      id: profileData.id,
+      email: profileData.email || '', // Or handle more securely if needed for public view
+      name: profileData.name || '',
+      phone: profileData.phone || '', // Consider privacy for public display
+      avatar: profileData.avatar || '',
+      country: profileData.country || '',
+      preferences: { // These might not be relevant for a public profile, or a subset could be
+        language: profileData.language || 'en',
+        darkMode: profileData.dark_mode || false,
+        biometricAuth: profileData.biometric_auth || false, // Likely not public
+        notifications: { // Likely not public
+          matches: profileData.notification_matches ?? true,
+          marketUpdates: profileData.notification_market_updates ?? true,
+          newListings: profileData.notification_new_listings ?? true,
+          subscriptionUpdates: profileData.notification_subscription_updates ?? true
+        },
+        propertyPreferences: { // A subset might be public if user consents
+          types: profileData.property_types || [],
+          budget: {
+            min: profileData.property_budget_min || 0,
+            max: profileData.property_budget_max || 0
+          },
+          bedrooms: profileData.property_bedrooms || 0,
+          bathrooms: profileData.property_bathrooms || 0,
+          locations: profileData.property_locations || []
+        },
+        location: profileData.location || '', // This is likely public (e.g. city)
+        currency: profileData.currency || 'AED', // May or may not be public
+        isNegotiable: profileData.is_negotiable || false, // Related to property, could be public
+        requestingPrice: profileData.requesting_price || null // Related to property, could be public
+      },
+      subscription: profileData.subscription || 'free', // May or may not be public
+      message_count: profileData.message_count || 0, // Likely not public
+      message_limit: profileData.message_limit || 50, // Likely not public
+      created_at: profileData.created_at || new Date().toISOString(),
+      updated_at: profileData.updated_at || new Date().toISOString(),
+      role: profileData.role || 'user', // Publicly relevant
+      onboarding_completed: profileData.onboarding_completed || false, // May not be public
+      email_verified: profileData.email_verified || false, // May not be public directly, but implies trust
+      // Realtor/Seller specific fields (publicly relevant)
+      reraLicenseNumber: profileData.rera_license_number || '',
+      dldLicenseNumber: profileData.dld_license_number || '',
+      admLicenseNumber: profileData.adm_license_number || '',
+      city: profileData.city || '', // Publicly relevant
+      experienceYears: profileData.experience_years === null ? undefined : profileData.experience_years,
+      specialties: profileData.specialties || [],
+      languagesSpoken: profileData.languages_spoken || [],
+      bio: profileData.bio || '', // Publicly relevant
+      properties_market_status: profileData.properties_market_status || 'not_requested', // Could be relevant if 'approved'
+      // Social media fields (publicly relevant)
+      linkedin_url: profileData.linkedin_url || '',
+      youtube_url: profileData.youtube_url || '',
+      whatsapp_number: profileData.whatsapp_number || '', // Consider privacy implications
+      tiktok_url: profileData.tiktok_url || '',
+      instagram_url: profileData.instagram_url || '',
+      snapchat_username: profileData.snapchat_username || '',
+      // Fields like averageRating and reviewCount if they exist on your profiles table
+      averageRating: profileData.average_rating === null ? undefined : profileData.average_rating,
+      reviewCount: profileData.review_count === null ? undefined : profileData.review_count,
+      // reviews: profileData.reviews || [], // If reviews are stored directly or fetched separately
+    };
+
+    return user;
+  } catch (error: any) {
+    console.error('[Auth Service] Get user by ID error:', error.message);
+    // Do not re-throw if it's a known "not found" error, otherwise, let it propagate
+    if (error.code !== 'PGRST116') {
+        throw error;
+    }
+    return null; // Return null for "not found" or other handled errors
   }
 };

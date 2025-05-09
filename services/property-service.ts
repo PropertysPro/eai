@@ -263,4 +263,21 @@ export const propertyService = {
     if (error) throw error;
     return property;
   },
+
+  async getPropertiesByUserId(userId: string): Promise<Property[]> {
+    console.log('[PropertyService] Fetching properties for user ID:', userId);
+    const { data: properties, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('userId', userId) // Ensure this matches your table's column name for user ID
+      .order('created_at', { ascending: false }); // Ensure 'created_at' is the correct column name
+
+    if (error) {
+      console.error('[PropertyService] Error fetching properties by user ID:', error.message);
+      throw error;
+    }
+    
+    console.log(`[PropertyService] Found ${properties?.length || 0} properties for user ID: ${userId}`);
+    return properties || [];
+  },
 };

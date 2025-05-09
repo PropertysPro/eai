@@ -58,6 +58,14 @@ export interface User {
   // Visibility request for Properties Market
   // request_properties_market_visibility?: boolean; // Replaced by status field
   properties_market_status?: 'not_requested' | 'pending_approval' | 'approved' | 'rejected';
+
+  // Social media links
+  linkedin_url?: string;
+  youtube_url?: string;
+  whatsapp_number?: string;
+  tiktok_url?: string;
+  instagram_url?: string;
+  snapchat_username?: string;
 }
 
 export interface Review {

@@ -98,8 +98,8 @@ export default function RootLayout() {
             <Stack.Screen name="history" options={{ headerShown: false, animation: 'none' }} />
             <Stack.Screen name="how-we-work" options={{ headerShown: false, animation: 'none' }} />
             <Stack.Screen name="checkout" options={{ headerShown: false, animation: 'none' }} />
-            <Stack.Screen name="legal/terms" options={{ title: "Terms of Service", animation: 'none' }} />
-            <Stack.Screen name="legal/privacy" options={{ title: "Privacy Policy", animation: 'none' }} />
+            <Stack.Screen name="legal" options={{ headerShown: false, animation: 'none' }} /> 
+            {/* This will use app/legal/_layout.tsx to manage its children */}
             <Stack.Screen name="version" options={{ title: "App Version", animation: 'none' }} />
             <Stack.Screen name="notifications" options={{ title: "Notifications", animation: 'none' }} />
             </Stack>
