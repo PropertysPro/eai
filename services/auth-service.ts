@@ -8,18 +8,16 @@ export const updateProfile = async (updates: any): Promise<User> => {
   try {
     console.log('[Auth Service] Updating user profile with updates:', JSON.stringify(updates, null, 2));
     
-    // Get current session user FIRST to ensure we operate on the correct user
     let { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !sessionResult?.session) {
       console.log('[Auth Service] No active session, attempting to refresh...');
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
       if (refreshError || !refreshData.session) {
         console.error('[Auth Service] Update profile error: No valid session available while trying to refresh.');
         throw new Error('Update profile error: Auth session missing or could not be refreshed!');
       }
-      sessionResult = refreshData; // Use the refreshed session data
+      sessionResult = refreshData;
     }
 
     if (!sessionResult?.session?.user) {
@@ -27,30 +25,26 @@ export const updateProfile = async (updates: any): Promise<User> => {
     }
     
     const userId = sessionResult.session.user.id;
-    const userEmail = sessionResult.session.user.email || ''; // Email from the current session
-    // sessionData can be sessionResult if needed later, e.g., for email_verified status
+    const userEmail = sessionResult.session.user.email || '';
     const sessionData = sessionResult; 
 
-    // Update user metadata in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.updateUser({
-      data: {
-        name: updates.name
+    // Update user metadata in Supabase Auth (e.g., name if it's part of Supabase auth user_metadata)
+    if (updates.name) {
+      const { error: authUserUpdateError } = await supabase.auth.updateUser({
+        data: { name: updates.name }
+      });
+      if (authUserUpdateError) {
+        console.error('[Auth Service] Error updating user metadata in Supabase Auth:', authUserUpdateError.message);
+        // Decide if this is a fatal error or if profile update can continue
       }
-    });
-
-    if (authError) {
-      console.error('[Auth Service] Update profile error:', authError.message);
-      throw authError;
     }
 
-    // Helper function to handle numeric values
     const parseNumeric = (value: any): number | null => {
       if (value === '' || value === null || value === undefined) return null;
       const num = Number(value);
       return isNaN(num) ? null : num;
     };
 
-    // Get current profile data
     let { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
@@ -63,117 +57,107 @@ export const updateProfile = async (updates: any): Promise<User> => {
     }
 
     if (!profile) {
-      // If profile is null, it means no profile was found for the session userId. Create it now.
-      console.log(`[Auth Service] Profile not found for user ID: ${userId} (from session). Creating new profile.`);
+      console.log(`[Auth Service] Profile not found for user ID: ${userId}. Creating new profile.`);
       try {
-        // Use userId and userEmail from the current session. updates.name and updates.phone come from the form.
-        // createUserProfile now returns the created profile.
-        const newlyCreatedProfile = await createUserProfile(userId, userEmail, updates.name, updates.phone);
-
+        // Pass all relevant fields from 'updates' that createUserProfile might use
+        const newlyCreatedProfile = await createUserProfile(
+          userId, 
+          userEmail, 
+          updates.name, 
+          updates.phone, 
+          updates.role ? [updates.role] : undefined, 
+          updates.country
+        );
         if (!newlyCreatedProfile) {
-          // This case should ideally be handled by an error throw in createUserProfile if it fails to return data
-          console.error(`[Auth Service] createUserProfile did not return a profile for user ID ${userId}.`);
-          throw new Error(`[Auth Service] Failed to create or retrieve profile for user ID ${userId} after attempting creation.`);
+          throw new Error(`[Auth Service] Failed to create or retrieve profile for user ID ${userId}.`);
         }
-        
-        profile = newlyCreatedProfile; // Assign the newly created profile
-        console.log(`[Auth Service] Successfully created and fetched new profile for user ID: ${userId}. Profile:`, JSON.stringify(profile, null, 2));
+        profile = newlyCreatedProfile;
       } catch (creationError: any) {
         console.error(`[Auth Service] Error during profile creation for user ID ${userId}:`, creationError.message);
         throw creationError;
       }
     }
 
-    // Prepare profile update data - start with basic fields that are guaranteed to exist
+    // Prepare profile update data for the 'profiles' table
     let profileUpdate: any = {
-      // name: updates.name, // name is updated via supabase.auth.updateUser({ data: { name: updates.name }})
-      // User Preferences
-      language: updates.preferences?.language || 'en',
-      dark_mode: updates.preferences?.darkMode || false,
-      biometric_auth: updates.preferences?.biometricAuth || false,
-      // Notification Preferences
-      notification_matches: updates.preferences?.notifications?.matches ?? true,
-      notification_market_updates: updates.preferences?.notifications?.marketUpdates ?? true,
-      notification_new_listings: updates.preferences?.notifications?.newListings ?? true,
-      notification_subscription_updates: updates.preferences?.notifications?.subscriptionUpdates ?? true,
-      // Property Preferences
-      property_types: updates.preferences?.propertyPreferences?.types || [],
-      property_budget_min: parseNumeric(updates.preferences?.propertyPreferences?.budget?.min) || 0,
-      property_budget_max: parseNumeric(updates.preferences?.propertyPreferences?.budget?.max) || 0,
-      property_bedrooms: parseNumeric(updates.preferences?.propertyPreferences?.bedrooms) || 0,
-      property_bathrooms: parseNumeric(updates.preferences?.propertyPreferences?.bathrooms) || 0,
-      property_locations: updates.preferences?.propertyPreferences?.locations || [],
-      // Additional fields
-      location: updates.preferences?.location || 'Dubai, UAE',
-      currency: updates.preferences?.currency || 'AED',
-      is_negotiable: updates.preferences?.isNegotiable || false,
-      requesting_price: parseNumeric(updates.preferences?.requestingPrice),
-      // Keep existing values for these fields
-      subscription: profile.subscription || 'free',
-      message_count: profile.message_count || 0,
-      message_limit: profile.message_limit || 50,
-      role: profile.role || 'user',
-      onboarding_completed: updates.onboarding_completed !== undefined ? updates.onboarding_completed : profile.onboarding_completed || false,
-      email_verified: sessionData?.session?.user?.email_confirmed_at !== null || false,
+      language: updates.preferences?.language !== undefined ? updates.preferences.language : profile.language,
+      dark_mode: updates.preferences?.darkMode !== undefined ? updates.preferences.darkMode : profile.dark_mode,
+      biometric_auth: updates.preferences?.biometricAuth !== undefined ? updates.preferences.biometricAuth : profile.biometric_auth,
+      notification_matches: updates.preferences?.notifications?.matches !== undefined ? updates.preferences.notifications.matches : profile.notification_matches,
+      notification_market_updates: updates.preferences?.notifications?.marketUpdates !== undefined ? updates.preferences.notifications.marketUpdates : profile.notification_market_updates,
+      notification_new_listings: updates.preferences?.notifications?.newListings !== undefined ? updates.preferences.notifications.newListings : profile.notification_new_listings,
+      notification_subscription_updates: updates.preferences?.notifications?.subscriptionUpdates !== undefined ? updates.preferences.notifications.subscriptionUpdates : profile.notification_subscription_updates,
+      property_types: updates.preferences?.propertyPreferences?.types !== undefined ? updates.preferences.propertyPreferences.types : profile.property_types,
+      property_budget_min: parseNumeric(updates.preferences?.propertyPreferences?.budget?.min) ?? profile.property_budget_min,
+      property_budget_max: parseNumeric(updates.preferences?.propertyPreferences?.budget?.max) ?? profile.property_budget_max,
+      property_bedrooms: parseNumeric(updates.preferences?.propertyPreferences?.bedrooms) ?? profile.property_bedrooms,
+      property_bathrooms: parseNumeric(updates.preferences?.propertyPreferences?.bathrooms) ?? profile.property_bathrooms,
+      property_locations: updates.preferences?.propertyPreferences?.locations !== undefined ? updates.preferences.propertyPreferences.locations : profile.property_locations,
+      location: updates.preferences?.location !== undefined ? updates.preferences.location : profile.location,
+      currency: updates.preferences?.currency !== undefined ? updates.preferences.currency : profile.currency,
+      is_negotiable: updates.preferences?.isNegotiable !== undefined ? updates.preferences.isNegotiable : profile.is_negotiable,
+      requesting_price: parseNumeric(updates.preferences?.requestingPrice) ?? profile.requesting_price,
+      
+      message_count: profile.message_count, 
+      message_limit: profile.message_limit, 
+      role: updates.role !== undefined ? updates.role : profile.role,
+      onboarding_completed: updates.onboarding_completed !== undefined ? updates.onboarding_completed : profile.onboarding_completed,
+      email_verified: sessionData?.session?.user?.email_confirmed_at !== null || profile.email_verified,
       updated_at: new Date().toISOString(),
-      // Realtor license fields (if user is a realtor)
-      rera_license_number: updates.reraLicenseNumber || profile.rera_license_number || '',
-      dld_license_number: updates.dldLicenseNumber || profile.dld_license_number || '',
-      adm_license_number: updates.admLicenseNumber || profile.adm_license_number || '',
-      // Ensure phone number from updates is prioritized if provided
-      phone: updates.phone !== undefined ? updates.phone : profile.phone || '',
+      
+      rera_license_number: updates.reraLicenseNumber !== undefined ? updates.reraLicenseNumber : profile.rera_license_number,
+      dld_license_number: updates.dldLicenseNumber !== undefined ? updates.dldLicenseNumber : profile.dld_license_number,
+      adm_license_number: updates.admLicenseNumber !== undefined ? updates.admLicenseNumber : profile.adm_license_number,
+      
+      city: updates.city !== undefined ? updates.city : profile.city,
+      experience_years: updates.experienceYears !== undefined ? parseNumeric(updates.experienceYears) : profile.experience_years,
+      specialties: updates.specialties !== undefined ? updates.specialties : profile.specialties,
+      languages_spoken: updates.languagesSpoken !== undefined ? updates.languagesSpoken : profile.languages_spoken,
+      bio: updates.bio !== undefined ? updates.bio : profile.bio,
+      properties_market_status: updates.properties_market_status !== undefined ? updates.properties_market_status : profile.properties_market_status,
+      
+      phone: updates.phone !== undefined ? updates.phone : profile.phone,
+      country: updates.country !== undefined ? updates.country : profile.country,
+      subscription: updates.subscription !== undefined ? updates.subscription : profile.subscription,
     };
-
-    // Only include name in profileUpdate if it's explicitly in updates and different from auth metadata
-    // Supabase auth.updateUser is the primary way to update user's main attributes like name
-    // However, if the 'profiles' table 'name' is meant to be independently updatable or synced,
-    // this logic might need adjustment. For now, we assume 'name' in 'profiles' is a cache/copy.
-    if (updates.name && updates.name !== profile.name) {
-      profileUpdate.name = updates.name;
-    } else if (!updates.name && profile.name) {
-      // If updates.name is not provided, keep existing profile.name
-      profileUpdate.name = profile.name;
+    
+    if (updates.name !== undefined) {
+        profileUpdate.name = updates.name;
+    } else if (profile.name) {
+        profileUpdate.name = profile.name;
     }
 
-
-    // Check if avatar field exists in the profile before adding it to the update
-    // or if updates.avatar is explicitly provided (even if null, to clear it)
     if (updates.avatar !== undefined) {
       profileUpdate.avatar = updates.avatar;
-    } else if ('avatar' in profile) {
-      // If updates.avatar is not provided, keep existing profile.avatar
+    } else if (profile.avatar) {
       profileUpdate.avatar = profile.avatar;
     }
     
-    // Update profile in database
     const { data: updatedProfile, error: updateError } = await supabase
       .from('profiles')
       .update(profileUpdate)
       .eq('id', userId)
       .select()
-      .maybeSingle(); // Changed to maybeSingle() for robustness
+      .single(); 
       
     if (updateError) {
-      // This handles actual database errors during the update.
       console.error('[Auth Service] Database error while updating profile:', updateError.message);
       throw updateError;
     }
     
     if (!updatedProfile) {
-      // If updatedProfile is null, it means the update operation did not return the expected row.
-      // This could be due to RLS or other unexpected issues.
-      const errorMessage = `Failed to retrieve profile after update for user ID: ${userId}. The update may have failed or the row is not accessible.`;
+      const errorMessage = `Failed to retrieve profile after update for user ID: ${userId}.`;
       console.error(`[Auth Service] ${errorMessage}`);
       throw new Error(errorMessage);
     }
     
-    // Create user object with updated data
     const user: User = {
       id: userId,
       email: userEmail,
       name: updatedProfile.name || '',
       phone: updatedProfile.phone || '',
       avatar: updatedProfile.avatar || '',
+      country: updatedProfile.country || '',
       preferences: {
         language: updatedProfile.language || 'en',
         darkMode: updatedProfile.dark_mode || false,
@@ -207,15 +191,18 @@ export const updateProfile = async (updates: any): Promise<User> => {
       role: updatedProfile.role || 'user',
       onboarding_completed: updatedProfile.onboarding_completed || false,
       email_verified: sessionData?.session?.user?.email_confirmed_at !== null || false,
-      // Realtor license fields
       reraLicenseNumber: updatedProfile.rera_license_number || '',
       dldLicenseNumber: updatedProfile.dld_license_number || '',
       admLicenseNumber: updatedProfile.adm_license_number || '',
+      city: updatedProfile.city || '',
+      experienceYears: updatedProfile.experience_years === null ? undefined : updatedProfile.experience_years,
+      specialties: updatedProfile.specialties || [],
+      languagesSpoken: updatedProfile.languages_spoken || [],
+      bio: updatedProfile.bio || '',
+      properties_market_status: updatedProfile.properties_market_status || 'not_requested',
     };
     
-    // Update stored user data
     await crossStorage.setItem('user_data', JSON.stringify(user));
-
     return user;
   } catch (error: any) {
     console.error('[Auth Service] Update profile error:', error.message);
@@ -224,12 +211,11 @@ export const updateProfile = async (updates: any): Promise<User> => {
 };
 
 // Register a new user
-export const register = async (email: string, password: string, name?: string, phone?: string, roles?: string[]) => {
+export const register = async (email: string, password: string, name?: string, phone?: string, roles?: string[], country?: string) => {
   try {
-    console.log('[Auth Service] Registering user:', email);
+    console.log('[Auth Service] Registering user:', email, 'with country:', country);
     
-    // Register user with Supabase Auth and send confirmation email
-        const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -242,7 +228,6 @@ export const register = async (email: string, password: string, name?: string, p
       },
     });
 
-    // Log the response for debugging
     console.log('[Auth Service] Registration response:', 
       data ? `User ID: ${data.user?.id}, Email confirmation status: ${data.user?.email_confirmed_at ? 'Confirmed' : 'Pending'}` : 'No data', 
       error ? `Error: ${error.message}` : 'No error'
@@ -253,32 +238,24 @@ export const register = async (email: string, password: string, name?: string, p
       throw error;
     }
     
-    console.log('[Auth Service] User registered successfully:', data?.user?.id);
-    console.log('[Auth Service] Email confirmation status:', data?.user?.email_confirmed_at ? 'Confirmed' : 'Pending confirmation');
+    console.log('[Auth Service] User registered successfully:', data.user?.id);
+    console.log('[Auth Service] Email confirmation status:', data.user?.email_confirmed_at ? 'Confirmed' : 'Pending confirmation');
     
-    // Create user profile in the database
     let createdProfile = null;
-    if (data?.user?.id) {
+    if (data.user?.id) {
       try {
-        // createUserProfile now returns the profile data
-        createdProfile = await createUserProfile(data.user.id, email, name, phone, roles); 
+        createdProfile = await createUserProfile(data.user.id, email, name, phone, roles, country); 
         console.log('[Auth Service] User profile created/retrieved successfully during registration:', JSON.stringify(createdProfile, null, 2));
       } catch (profileError: any) {
         console.error('[Auth Service] Error creating/retrieving user profile during registration:', profileError.message);
-        // Decide if this should be a fatal error for registration
-        // For now, we'll let registration proceed but log the error. The profile might be completed later.
-        // throw profileError; 
       }
     }
     
-    // Log the auth registration data and the created profile
     console.log('[Auth Service] Supabase Auth registration data:', JSON.stringify(data, null, 2));
     if (createdProfile) {
       console.log('[Auth Service] Created/Upserted Profile during registration:', JSON.stringify(createdProfile, null, 2));
     }
 
-    // The function should ideally return a consistent User object or the auth data + profile
-    // For now, returning the original Supabase auth data, but the app flow might need to use createdProfile
     return { authData: data, profileData: createdProfile };
   } catch (error: any) {
     console.error('[Auth Service] Registration error:', error.message);
@@ -287,37 +264,34 @@ export const register = async (email: string, password: string, name?: string, p
 };
 
 // Create user profile in the database
-export const createUserProfile = async (userId: string, email: string, name?: string, phone?: string, roles?: string[]): Promise<any> => {
+export const createUserProfile = async (userId: string, email: string, name?: string, phone?: string, roles?: string[], country?: string): Promise<any> => {
   try {
-    console.log('[Auth Service] Creating/Updating user profile for:', email, 'User ID:', userId);
+    console.log('[Auth Service] Creating/Updating user profile for:', email, 'User ID:', userId, 'Country:', country);
     
-    // First check if profile already exists with a more robust approach
     let profileExists = false;
     try {
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
+        .maybeSingle(); 
       
       profileExists = !!existingProfile;
       console.log('[Auth Service] Profile exists check:', profileExists, 'for user ID:', userId);
     } catch (checkErr) {
       console.error('[Auth Service] Error checking if profile exists:', checkErr);
-      // Continue with the assumption that the profile might not exist
     }
     
-    // Upsert handles both creation and update based on conflict resolution.
     const upsertData: any = {
-      id: userId, // Ensure id is part of the upsert data for matching
+      id: userId, 
       email,
       name: name || email.split('@')[0],
-      role: roles && roles.length > 0 ? roles[0] : 'user', // Set role
+      role: roles && roles.length > 0 ? roles[0] : 'user', 
       subscription: 'free',
       message_count: 0,
       message_limit: 100,
       updated_at: new Date().toISOString(),
-      email_verified: false, // This should be updated by a separate email verification flow
+      email_verified: false, 
       onboarding_completed: false,
       language: 'en',
       dark_mode: false,
@@ -332,29 +306,33 @@ export const createUserProfile = async (userId: string, email: string, name?: st
       property_bedrooms: 0,
       property_bathrooms: 0,
       property_locations: [],
-      location: 'Dubai, UAE',
+      location: country || 'Dubai, UAE', 
       currency: 'AED',
       is_negotiable: false,
       requesting_price: null,
-      phone: phone || '', // Ensure phone is included
+      phone: phone || '', 
+      country: country || '', 
+      rera_license_number: '',
+      dld_license_number: '',
+      adm_license_number: '',
+      city: '',
+      experience_years: null,
+      specialties: [],
+      languages_spoken: [],
+      bio: '',
+      properties_market_status: 'not_requested',
     };
 
-    // If it's a new profile (profileExists is false), set created_at.
-    // Supabase upsert might handle this if `DEFAULT NOW()` is set and it's an INSERT.
-    // However, explicitly setting it ensures it if not already existing.
     if (!profileExists) {
       upsertData.created_at = new Date().toISOString();
-    } else {
-      // If profile exists, we don't want to overwrite created_at
-      // delete upsertData.created_at; // Or ensure it's not in the initial object for updates
     }
     
     console.log('[Auth Service] Attempting to upsert profile with data:', JSON.stringify(upsertData, null, 2));
     const { data: upsertedProfile, error: upsertError } = await supabase
       .from('profiles')
       .upsert(upsertData, { onConflict: 'id' })
-      .select() // Select all columns from the upserted row
-      .single(); // Expect a single row to be returned
+      .select() 
+      .single(); 
 
     if (upsertError) {
       console.error('[Auth Service] Error upserting user profile:', upsertError.message);
@@ -364,12 +342,12 @@ export const createUserProfile = async (userId: string, email: string, name?: st
     }
 
     if (!upsertedProfile) {
-      console.error('[Auth Service] Upserted profile data is null, though no error was thrown. This is unexpected.');
+      console.error('[Auth Service] Upserted profile data is null, though no error was thrown.');
       throw new Error('Failed to retrieve profile data after upsert.');
     }
 
     console.log('[Auth Service] User profile created/updated successfully via upsert:', JSON.stringify(upsertedProfile, null, 2));
-    return upsertedProfile; // Return the full profile object
+    return upsertedProfile;
   } catch (error: any) {
     console.error('[Auth Service] Error in createUserProfile:', error.message);
     throw error;
@@ -395,7 +373,6 @@ export const login = async (email: string, password: string): Promise<User> => {
       throw new Error('No user data returned from login');
     }
 
-    // Get user profile data
     let profile = null;
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -403,50 +380,37 @@ export const login = async (email: string, password: string): Promise<User> => {
       .eq('id', session.user.id)
       .single();
 
-    // If no profile exists, create one
-    if (profileError || !profileData) { // Check for error or if profileData is null/undefined
-      console.log('[Auth Service] No profile found or error fetching profile, attempting to create/retrieve one.');
+    if (profileError || !profileData) {
+      console.log('[Auth Service] No profile found, attempting to create one.');
       try {
-        // createUserProfile now returns the profile data directly
         const newProfile = await createUserProfile(
           session.user.id,
           session.user.email || '',
           session.user.user_metadata?.name || session.user.email?.split('@')[0]
-          // phone and roles are optional and typically not available at this stage of login
         );
-        
         if (!newProfile) {
-          // This case should ideally be handled by an error throw in createUserProfile if it fails to return data
-          console.error('[Auth Service] createUserProfile did not return a profile during login.');
           throw new Error('Failed to create or retrieve user profile during login.');
         }
-        
-        profile = newProfile; // Assign the directly returned profile
-        console.log('[Auth Service] Successfully created/retrieved profile during login:', JSON.stringify(profile, null, 2));
-        
+        profile = newProfile;
       } catch (createOrFetchErr: any) {
         console.error('[Auth Service] Error creating/retrieving profile during login:', createOrFetchErr.message);
-        // If profile creation/retrieval fails here, it's a critical issue for login.
         throw new Error('Failed to get or create user profile during login.');
       }
     } else {
       profile = profileData;
-      console.log('[Auth Service] Profile data fetched successfully during login:', JSON.stringify(profile, null, 2));
     }
 
-    // At this point, profile should be populated. If not, something went wrong.
     if (!profile) {
-      console.error('[Auth Service] Profile is still null after attempting fetch/create. This indicates a critical failure.');
       throw new Error('Failed to get or create user profile.');
     }
 
-    // Create user object with all required fields
     const user: User = {
       id: session.user.id,
       email: session.user.email || '',
       name: profile.name || '',
       phone: profile.phone || '',
       avatar: profile.avatar || '',
+      country: profile.country || '',
       preferences: {
         language: profile.language || 'en',
         darkMode: profile.dark_mode || false,
@@ -480,15 +444,18 @@ export const login = async (email: string, password: string): Promise<User> => {
       role: profile.role || 'user',
       onboarding_completed: profile.onboarding_completed || false,
       email_verified: session.user.email_confirmed_at !== null,
-      // Realtor license fields
       reraLicenseNumber: profile.rera_license_number || '',
       dldLicenseNumber: profile.dld_license_number || '',
       admLicenseNumber: profile.adm_license_number || '',
+      city: profile.city || '',
+      experienceYears: profile.experience_years === null ? undefined : profile.experience_years,
+      specialties: profile.specialties || [],
+      languagesSpoken: profile.languages_spoken || [],
+      bio: profile.bio || '',
+      properties_market_status: profile.properties_market_status || 'not_requested',
     };
 
-    // Store user data in crossStorage
     await crossStorage.setItem('user_data', JSON.stringify(user));
-
     return user;
   } catch (error: any) {
     console.error('[Auth Service] Login error:', error.message);
@@ -500,17 +467,12 @@ export const login = async (email: string, password: string): Promise<User> => {
 export const logout = async () => {
   try {
     console.log('[Auth Service] Logging out user');
-    
     const { error } = await supabase.auth.signOut();
-    
     if (error) {
       console.error('[Auth Service] Logout error:', error.message);
       throw error;
     }
-    
-    // Clear user data from AsyncStorage
     await crossStorage.removeItem('user_data');
-    
     console.log('[Auth Service] User logged out successfully');
     return;
   } catch (error: any) {
@@ -523,20 +485,16 @@ export const logout = async () => {
 export const getCurrentUser = async () => {
   try {
     console.log('[Auth Service] Getting current user');
-    
     const { data, error } = await supabase.auth.getUser();
-    
     if (error) {
       console.error('[Auth Service] Get current user error:', error.message);
       throw error;
     }
-    
     if (!data?.user) {
       console.log('[Auth Service] No user found');
       return null;
     }
 
-    // Get user profile from database
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -553,13 +511,13 @@ export const getCurrentUser = async () => {
       throw new Error('User profile not found');
     }
 
-    // Create user object with proper mapping
     const user: User = {
       id: profileData.id,
       email: profileData.email || '',
       name: profileData.name || '',
       phone: profileData.phone || '',
       avatar: profileData.avatar || '',
+      country: profileData.country || '',
       preferences: {
         language: profileData.language || 'en',
         darkMode: profileData.dark_mode || false,
@@ -593,13 +551,17 @@ export const getCurrentUser = async () => {
       role: profileData.role || 'user',
       onboarding_completed: profileData.onboarding_completed || false,
       email_verified: data.user.email_confirmed_at !== null,
-      // Realtor license fields
       reraLicenseNumber: profileData.rera_license_number || '',
       dldLicenseNumber: profileData.dld_license_number || '',
       admLicenseNumber: profileData.adm_license_number || '',
+      city: profileData.city || '',
+      experienceYears: profileData.experience_years === null ? undefined : profileData.experience_years,
+      specialties: profileData.specialties || [],
+      languagesSpoken: profileData.languages_spoken || [],
+      bio: profileData.bio || '',
+      properties_market_status: profileData.properties_market_status || 'not_requested',
     };
 
-    // Store user data in AsyncStorage
     await crossStorage.setItem('user_data', JSON.stringify(user));
     return user;
   } catch (error: any) {
@@ -612,16 +574,13 @@ export const getCurrentUser = async () => {
 export const resetPassword = async (email: string) => {
   try {
     console.log('[Auth Service] Sending password reset email to:', email);
-    
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://gjymtvzdvyekhocqyvpa.supabase.co/auth/v1/verify?redirect_to=elmeai://auth/reset-password',
     });
-    
     if (error) {
       console.error('[Auth Service] Password reset error:', error.message);
       throw error;
     }
-    
     console.log('[Auth Service] Password reset email sent successfully');
     return data;
   } catch (error: any) {
@@ -634,7 +593,6 @@ export const resetPassword = async (email: string) => {
 export const updateUser = async (updates: any) => {
   try {
     console.log('[Auth Service] Updating user');
-    // Ensure there is a valid Supabase session before updating user
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData?.session) {
       console.error('[Auth Service] Update user error: No Supabase session available');
@@ -735,27 +693,23 @@ export const loginWithFacebook = async (): Promise<User> => {
       console.error('[Auth Service] Facebook login error:', error.message);
       throw error;
     }
-    // After OAuth, get the current user
     const { data: userData, error: userError } = await supabase.auth.getUser();
     console.log('[Auth Service][DEBUG] userData after OAuth:', JSON.stringify(userData));
     if (userError || !userData?.user) {
       throw new Error('Failed to get user after Facebook login');
     }
-    // Try to fetch profile from DB
     let profile = null;
     try {
       profile = await getUser(userData.user.id);
       console.log('[Auth Service][DEBUG] Profile fetched from DB:', JSON.stringify(profile));
       } catch (err: any) {
         console.log('[Auth Service][DEBUG] No profile found, will create profile. Error:', err?.message || 'Unknown error');
-        // ignore fetch error, will create profile below
       }
     if (!profile) {
       const name = typeof userData.user.user_metadata?.name === 'string' && userData.user.user_metadata?.name.trim() !== ''
         ? userData.user.user_metadata.name
         : (userData.user.email || '');
       
-      // Use our improved createUserProfile function with the new table structure
       try {
         await createUserProfile(
           userData.user.id,
@@ -764,7 +718,6 @@ export const loginWithFacebook = async (): Promise<User> => {
         );
         console.log('[Auth Service] Created new profile for Facebook user with updated table structure');
         
-        // Fetch the newly created/updated profile
         const { data: newProfile, error: newProfileError } = await supabase
           .from('profiles')
           .select('*')
@@ -782,13 +735,10 @@ export const loginWithFacebook = async (): Promise<User> => {
         throw new Error('Failed to create/update user profile for Facebook user');
       }
     }
-    // Call getCurrentUser to ensure user_data is set in AsyncStorage as expected by onboarding
-    // Debug: Check what is in crossStorage after Facebook login
     const debugStoredUser = await crossStorage.getItem('user_data');
     console.log('[Auth Service][DEBUG] user_data after Facebook login:', debugStoredUser);
     const currentUser = await getCurrentUser();
     console.log('[Auth Service][DEBUG] currentUser from getCurrentUser:', JSON.stringify(currentUser));
-    // Fallback: if getCurrentUser returns null, use the profile we just fetched/created
     return currentUser ?? profile;
   } catch (error: any) {
     console.error('[Auth Service] Facebook login error:', error.message);
@@ -811,16 +761,13 @@ export const socialLogin = async (provider: 'google' | 'apple'): Promise<User> =
       throw error;
     }
     
-    // After OAuth, get the current user
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
       throw new Error(`[Auth Service] ${provider} login failed: No user returned after OAuth`);
     }
     
-    // Try to fetch profile from DB
     let profile = null;
     try {
-      // Get user profile from database
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -829,20 +776,18 @@ export const socialLogin = async (provider: 'google' | 'apple'): Promise<User> =
       
       if (profileError) {
         console.log(`[Auth Service] No profile found for ${provider} user, creating new profile`);
-        throw profileError; // This will be caught by the catch block below
+        throw profileError; 
       }
       
       profile = profileData;
     } catch (err: any) {
       console.log(`[Auth Service] Error fetching profile for ${provider} user:`, err?.message || 'Unknown error');
       
-      // Create profile if it doesn't exist
       const name = typeof userData.user.user_metadata?.name === 'string' && userData.user.user_metadata?.name.trim() !== ''
         ? userData.user.user_metadata.name
         : (userData.user.email || '');
       
       try {
-        // Use our improved createUserProfile function with the new table structure
         await createUserProfile(
           userData.user.id,
           userData.user.email || '',
@@ -850,7 +795,6 @@ export const socialLogin = async (provider: 'google' | 'apple'): Promise<User> =
         );
         console.log(`[Auth Service] Created new profile for Facebook user with updated table structure`);
         
-        // Fetch the newly created/updated profile
         const { data: newProfile, error: newProfileError } = await supabase
           .from('profiles')
           .select('*')
@@ -869,10 +813,8 @@ export const socialLogin = async (provider: 'google' | 'apple'): Promise<User> =
       }
     }
     
-    // Call getCurrentUser to ensure user_data is set in AsyncStorage as expected by onboarding
     const currentUser = await getCurrentUser();
 
-    // Fallback: if getCurrentUser returns null, use the profile
     return currentUser ?? profile;
   } catch (error: any) {
     console.error(`[Auth Service] Social login error:`, error.message);
@@ -883,7 +825,6 @@ export const socialLogin = async (provider: 'google' | 'apple'): Promise<User> =
 // Function to check message limits
 export const checkMessageLimits = async (): Promise<{ canSend: boolean; remaining: number; limit: number }> => {
   try {
-    // Get current user session
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session?.user) {
       console.warn('No active user session found');
@@ -892,7 +833,6 @@ export const checkMessageLimits = async (): Promise<{ canSend: boolean; remainin
     
     const userId = sessionData.session.user.id;
     
-    // Fetch user profile with message limits
     const { data, error } = await supabase
       .from('profiles')
       .select('message_count, message_limit')
@@ -926,7 +866,6 @@ export const checkMessageLimits = async (): Promise<{ canSend: boolean; remainin
 // Function to update message usage
 export const updateMessageUsage = async (): Promise<number> => {
   try {
-    // Get current user session
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session?.user) {
       console.warn('No active user session found');
@@ -935,7 +874,6 @@ export const updateMessageUsage = async (): Promise<number> => {
     
     const userId = sessionData.session.user.id;
     
-    // First get the current message count
     const { data: currentData, error: fetchError } = await supabase
       .from('profiles')
       .select('message_count')
@@ -949,7 +887,6 @@ export const updateMessageUsage = async (): Promise<number> => {
     
     const newCount = (currentData?.message_count || 0) + 1;
     
-    // Update message count
     const { data, error } = await supabase
       .from('profiles')
       .update({ message_count: newCount })
@@ -962,7 +899,6 @@ export const updateMessageUsage = async (): Promise<number> => {
       return 0;
     }
 
-    // Return the updated message count
     return data?.message_count || 0;
   } catch (error: any) {
     console.error('Error updating message usage:', error.message);
@@ -1005,21 +941,109 @@ export const resendVerificationEmail = async (email: string): Promise<{ success:
   }
 };
 
+// Function to mark onboarding as complete
+export const completeOnboarding = async (): Promise<User> => {
+  try {
+    console.log('[Auth Service] Completing onboarding for current user');
+    const { data: { user: authUser }, error: sessionError } = await supabase.auth.getUser();
+
+    if (sessionError || !authUser) {
+      console.error('[Auth Service] Complete onboarding error: No authenticated user found.');
+      throw new Error('Complete onboarding error: User not authenticated.');
+    }
+
+    const updates = { onboarding_completed: true };
+    
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', authUser.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[Auth Service] Error updating onboarding status:', updateError.message);
+      throw updateError;
+    }
+
+    if (!updatedProfile) {
+      throw new Error('Failed to retrieve profile after updating onboarding status.');
+    }
+    
+    const user: User = {
+      id: updatedProfile.id,
+      email: updatedProfile.email || '',
+      name: updatedProfile.name || '',
+      phone: updatedProfile.phone || '',
+      avatar: updatedProfile.avatar || '',
+      country: updatedProfile.country || '',
+      preferences: {
+        language: updatedProfile.language || 'en',
+        darkMode: updatedProfile.dark_mode || false,
+        biometricAuth: updatedProfile.biometric_auth || false,
+        notifications: {
+          matches: updatedProfile.notification_matches ?? true,
+          marketUpdates: updatedProfile.notification_market_updates ?? true,
+          newListings: updatedProfile.notification_new_listings ?? true,
+          subscriptionUpdates: updatedProfile.notification_subscription_updates ?? true
+        },
+        propertyPreferences: {
+          types: updatedProfile.property_types || [],
+          budget: {
+            min: updatedProfile.property_budget_min || 0,
+            max: updatedProfile.property_budget_max || 0
+          },
+          bedrooms: updatedProfile.property_bedrooms || 0,
+          bathrooms: updatedProfile.property_bathrooms || 0,
+          locations: updatedProfile.property_locations || []
+        },
+        location: updatedProfile.location || '',
+        currency: updatedProfile.currency || 'AED',
+        isNegotiable: updatedProfile.is_negotiable || false,
+        requestingPrice: updatedProfile.requesting_price || null
+      },
+      subscription: updatedProfile.subscription || 'free',
+      message_count: updatedProfile.message_count || 0,
+      message_limit: updatedProfile.message_limit || 50,
+      created_at: updatedProfile.created_at || new Date().toISOString(),
+      updated_at: updatedProfile.updated_at || new Date().toISOString(),
+      role: updatedProfile.role || 'user',
+      onboarding_completed: updatedProfile.onboarding_completed, // Should be true
+      email_verified: authUser.email_confirmed_at !== null,
+      reraLicenseNumber: updatedProfile.rera_license_number || '',
+      dldLicenseNumber: updatedProfile.dld_license_number || '',
+      admLicenseNumber: updatedProfile.adm_license_number || '',
+      city: updatedProfile.city || '',
+      experienceYears: updatedProfile.experience_years === null ? undefined : updatedProfile.experience_years,
+      specialties: updatedProfile.specialties || [],
+      languagesSpoken: updatedProfile.languages_spoken || [],
+      bio: updatedProfile.bio || '',
+      properties_market_status: updatedProfile.properties_market_status || 'not_requested',
+    };
+
+    await crossStorage.setItem('user_data', JSON.stringify(user));
+    console.log('[Auth Service] Onboarding completed and user profile updated.');
+    return user;
+
+  } catch (error: any) {
+    console.error('[Auth Service] Error in completeOnboarding:', error.message);
+    throw error;
+  }
+};
+
+
 // Function to upload profile picture
 export const uploadProfilePicture = async (userId: string, uri: string): Promise<string | null> => {
   try {
     console.log('[Auth Service] Uploading profile picture for user:', userId);
     
-    // Generate a unique file name
     const fileExt = uri.split('.').pop();
     const fileName = `${userId}_${Date.now()}.${fileExt}`;
     const filePath = `avatars/${fileName}`;
     
-    // Convert URI to Blob
     const response = await fetch(uri);
     const blob = await response.blob();
     
-    // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from('profiles')
       .upload(filePath, blob, {
@@ -1028,32 +1052,30 @@ export const uploadProfilePicture = async (userId: string, uri: string): Promise
       });
     
     if (error) {
-      console.error('[Auth Service] Error uploading profile picture:', error.message);
-      throw error;
+      console.error('[Auth Service] Error uploading profile picture to Supabase Storage:', error.message);
+      return null; 
     }
     
-    // Get public URL
     const { data: urlData } = supabase.storage
       .from('profiles')
       .getPublicUrl(filePath);
     
     const publicUrl = urlData.publicUrl;
     
-    // Update user profile with new avatar URL
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ avatar: publicUrl })
       .eq('id', userId);
     
     if (updateError) {
-      console.error('[Auth Service] Error updating profile with avatar URL:', updateError.message);
-      throw updateError;
+      console.error('[Auth Service] Error updating profile table with new avatar URL:', updateError.message);
+      return null;
     }
     
-    console.log('[Auth Service] Profile picture uploaded successfully:', publicUrl);
+    console.log('[Auth Service] Profile picture uploaded and profile updated successfully:', publicUrl);
     return publicUrl;
   } catch (error: any) {
-    console.error('[Auth Service] Error in uploadProfilePicture:', error.message);
-    throw error;
+    console.error('[Auth Service] General error in uploadProfilePicture (e.g., network, blob conversion):', error.message);
+    return null; 
   }
 };

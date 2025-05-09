@@ -24,6 +24,7 @@ interface AuthContextType {
   checkMessageLimits: () => Promise<{ canSend: boolean; remaining: number; limit: number }>;
   updateMessageUsage: () => Promise<number>;
   resendVerificationEmail: (email: string) => Promise<{ success: boolean; message: string }>;
+  refreshUser: () => Promise<User | null>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -190,10 +191,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     register: async (data: { email: string; password: string; name: string }) => {
       const result = await authService.register(data.email, data.password, data.name);
-      if (!result.user) {
-        throw new Error('Failed to register user');
+      // Access user from result.authData.user
+      if (!result.authData || !result.authData.user) {
+        throw new Error('Failed to register user: No user data returned from auth service.');
       }
-      const transformedUser = transformSupabaseUser(result.user);
+      const transformedUser = transformSupabaseUser(result.authData.user);
       setUser(transformedUser);
       setIsAuthenticated(true);
       setIsAdmin(transformedUser.role === 'admin' || transformedUser.email === ADMIN_EMAIL);
@@ -270,6 +272,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resendVerificationEmail: async (email: string) => {
       console.log('[Auth Context] Resending verification email to:', email);
       return await authService.resendVerificationEmail(email);
+    },
+    refreshUser: async () => {
+      setIsLoading(true);
+      try {
+        console.log('[Auth Context] Refreshing user data');
+        const refreshedUser = await authService.getCurrentUser();
+        if (refreshedUser) {
+          setUser(refreshedUser);
+          setIsAuthenticated(true);
+          setIsAdmin(refreshedUser.role === 'admin' || refreshedUser.email === ADMIN_EMAIL);
+          setIsEmailVerificationNeeded(!refreshedUser.email_verified);
+          await crossStorage.setItem('user_data', JSON.stringify(refreshedUser));
+        } else {
+          // If getCurrentUser returns null (e.g., session expired or user deleted)
+          setUser(null);
+          setIsAuthenticated(false);
+          setIsAdmin(false);
+          setIsEmailVerificationNeeded(false);
+          await crossStorage.removeItem('user_data');
+        }
+        return refreshedUser;
+      } catch (error) {
+        console.error('[Auth Context] Error refreshing user data:', error);
+        // Optionally handle specific errors or re-throw
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setIsEmailVerificationNeeded(false);
+        await crossStorage.removeItem('user_data');
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
     },
   };
 

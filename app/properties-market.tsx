@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/use-auth';
 // import { propertyService } from '@/services/property-service'; // Assuming a similar service
@@ -61,6 +61,7 @@ export default function PropertiesMarketPage() {
   }, []);
 
   const loadPageData = async (refresh = false) => {
+    console.log('[PropertiesMarketPage] loadPageData called. Refresh:', refresh);
     if (refresh) {
       setRefreshing(true);
     } else {
@@ -70,11 +71,13 @@ export default function PropertiesMarketPage() {
       // TODO: Fetch actual data from services
       // For now, using mock data with a delay
       await new Promise(resolve => setTimeout(resolve, 1500));
-      // setRealtors(await realtorService.getRealtors());
-      // setDistressedDeals(await propertyService.getDistressedDeals());
-      // setLastListedProperties(await propertyService.getLastListed());
-      // setFeaturedProperties(await propertyService.getFeatured());
-      // setUrgentSaleRentProperties(await propertyService.getUrgentSaleRent());
+      console.log('[PropertiesMarketPage] About to set mock data states.');
+      setRealtors([mockRealtor]);
+      setDistressedDeals([mockProperty]);
+      setLastListedProperties([mockProperty, { ...mockProperty, id: '2', title: 'Another Villa' }]);
+      setFeaturedProperties([{ ...mockProperty, id: '3', title: 'Featured Condo' }]);
+      setUrgentSaleRentProperties([{ ...mockProperty, id: '4', title: 'Urgent Apartment' }]);
+      console.log('[PropertiesMarketPage] Mock data states set.');
     } catch (error) {
       console.error('Error loading properties market data:', error);
       Alert.alert('Error', 'Could not load properties market data.');
@@ -92,7 +95,9 @@ export default function PropertiesMarketPage() {
     router.push(`/property-details/${property.id}`); // Assuming a similar route
   };
 
-  const renderPropertySection = (title: string, properties: Property[]) => (
+  const renderPropertySection = (title: string, properties: Property[]) => {
+    console.log(`[PropertiesMarketPage] renderPropertySection: "${title}", Properties count: ${properties.length}`, properties);
+    return (
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {properties.length === 0 && !loading ? (
@@ -104,6 +109,7 @@ export default function PropertiesMarketPage() {
       )}
     </View>
   );
+}; // Added missing closing brace for renderPropertySection
 
   const renderRealtorCard = (realtor: typeof mockRealtor) => (
     <View style={styles.realtorCard}>
@@ -133,9 +139,13 @@ export default function PropertiesMarketPage() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <ActivityIndicator animating={refreshing} color={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />
         }
       >
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'red', textAlign: 'center', marginVertical: 20 }}>
+          DEBUG: MAIN CONTENT AREA RENDERING
+        </Text>
+
         {/* Search Filters Section */}
         <View style={styles.searchFilterContainer}>
           <Text style={styles.searchFilterTitle}>Find Your Perfect Property</Text>

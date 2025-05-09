@@ -6,6 +6,7 @@ import { Property } from '@/types/property';
 import { colors as Colors } from '@/constants/colors';
 import { formatPrice } from '@/utils/format';
 import { PropertyImage } from './PropertyImage';
+import { useCurrencyStore, SupportedCurrency } from '@/store/currency-store'; // Import store and type
 
 const { width } = Dimensions.get('window');
 const cardWidth = width * 0.85;
@@ -16,7 +17,7 @@ interface PropertyCardProps {
   savedProperties?: string[];
   showDetails?: boolean;
   isMatch?: boolean;
-  currencyPreference?: string;
+  currencyPreference?: SupportedCurrency; // Update prop type
   onPress?: () => void;
   showMarketplacePrice?: boolean;
   showMarketplaceStatus?: boolean;
@@ -28,12 +29,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   savedProperties = [],
   showDetails = true,
   isMatch = false,
-  currencyPreference = 'AED',
+  currencyPreference, // Remove default, will use global store
   onPress,
   showMarketplacePrice = false,
   showMarketplaceStatus = false,
 }) => {
   const router = useRouter();
+  const { currentCurrency: globalCurrency } = useCurrencyStore(); // Get global currency
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const isSaved = savedProperties && savedProperties.includes(property.id);
 
@@ -109,8 +111,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <View>
             <Text style={styles.price}>
               {showMarketplacePrice && property.marketplacePrice 
-                ? formatPrice(property.marketplacePrice, property.currency || currencyPreference)
-                : formatPrice(property.price, property.currency || currencyPreference)}
+                ? formatPrice(property.marketplacePrice, property.currency || currencyPreference || globalCurrency)
+                : formatPrice(property.price, property.currency || currencyPreference || globalCurrency)}
               {property.status === 'rented' && '/month'}
             </Text>
             {(showMarketplacePrice || showMarketplaceStatus) && property.isInMarketplace && (
@@ -184,7 +186,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: cardWidth,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.card.background,
     borderRadius: 12,
     marginHorizontal: 8,
     marginVertical: 8,

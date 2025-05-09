@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckCircle } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/auth-context';
-import * as authService from '@/services/auth-service';
-import { supabase } from '@/config/supabase';
+// import * as authService from '@/services/auth-service'; // Not directly used here anymore
+// import { supabase } from '@/config/supabase'; // Not directly used here anymore
 import { crossStorage } from '@/services/crossPlatformStorage';
 
 const { width, height } = Dimensions.get('window');
@@ -16,7 +16,8 @@ const BUTTON_COLOR = '#6200EE';
 
 export default function RegistrationSuccessScreen() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const params = useLocalSearchParams<{ role?: string }>(); // Get role from query params
+  const { user } = useAuth(); // user might be null here if not fully loaded yet
   const [isLoading, setIsLoading] = useState(false);
 
   const handleContinue = async () => {
@@ -24,14 +25,26 @@ export default function RegistrationSuccessScreen() {
       setIsLoading(true);
       
       // Store the registration state in local storage to maintain it across navigation
+      // This might still be useful depending on other app logic
       await crossStorage.setItem('just_registered', 'true');
       
-      // Navigate to profile setup
-      router.replace('/profile-setup');
+      // Prioritize role from params. Default to 'user' if param is somehow missing.
+      const userRole = params.role ? String(params.role) : 'user'; 
+      console.log('[RegistrationSuccessScreen] Role from params:', params.role, 'Derived userRole:', userRole);
+
+
+      if (userRole === 'realtor') {
+        console.log('[RegistrationSuccessScreen] Navigating to /auth/realtor-profile-setup');
+        router.replace('/auth/realtor-profile-setup');
+      } else {
+        console.log('[RegistrationSuccessScreen] Navigating to /profile-setup for role:', userRole);
+        // For 'buyer', 'owner', or any other role (or if role is somehow undefined)
+        router.replace('/profile-setup');
+      }
     } catch (error) {
       console.error("Error in handleContinue:", error);
-      // If there's an error, default to login
-      router.replace('/auth/login');
+      // If there's an error, default to login or a generic error page
+      router.replace('/auth/login'); 
     } finally {
       setIsLoading(false);
     }

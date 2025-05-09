@@ -4,6 +4,7 @@ export interface User {
   name: string;
   phone?: string;
   avatar?: string;
+  country?: string; // Added country field
   preferences: {
     language: string;
     darkMode: boolean;

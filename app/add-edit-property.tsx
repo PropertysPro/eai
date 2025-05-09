@@ -49,6 +49,7 @@ import { Property, PropertyType } from '@/types/property';
 import AnimatedBubble from '@/components/AnimatedBubble';
 import { useAuth } from '@/context/auth-context';
 import { marketplaceService } from '@/services/marketplace-service';
+import { SupportedCurrency } from '@/store/currency-store'; // Import SupportedCurrency
 
 // Constants
 const propertyTypes: PropertyType[] = [
@@ -533,9 +534,9 @@ export default function AddEditPropertyScreen() {
         // Add new status fields to saved data
         construction_status: construction_status,
         market_status: market_status,
-        currency: 'AED',
+        currency: 'AED' as SupportedCurrency, // Explicitly type the currency
         status: 'available' as const,
-        created_at: new Date().toISOString(),
+        created_at: existingProperty?.created_at || new Date().toISOString(), // Use existing created_at if updating
         updated_at: new Date().toISOString(),
         // Marketplace listing data
         isInMarketplace: listInMarketplace,

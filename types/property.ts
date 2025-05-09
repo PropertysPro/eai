@@ -1,3 +1,5 @@
+import { SupportedCurrency } from '@/store/currency-store'; // Import SupportedCurrency
+
 export type PropertyType = 
   | 'apartment'
   | 'villa'
@@ -47,7 +49,7 @@ export interface Property {
   isFavorite?: boolean;
   matchPercentage?: number;
   listingType?: 'sale' | 'rent';
-  currency?: string;
+  currency?: SupportedCurrency; // Update type here
   ownerId?: string;
   ownerName?: string;
   ownerContact?: string;
@@ -102,7 +104,7 @@ export interface PropertyFormData {
   originalPrice?: number;
   discountPercentage?: number;
   listingType?: 'sale' | 'rent';
-  currency?: string;
+  currency?: SupportedCurrency; // And here for PropertyFormData
   isNegotiable?: boolean;
   userId?: string;
   urgency?: 'high' | 'medium' | 'low';

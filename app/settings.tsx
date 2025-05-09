@@ -7,20 +7,25 @@ import {
   ScrollView,
   Switch,
   Alert,
-  Platform
+  Platform,
+  Modal, // Add Modal
+  Pressable // Add Pressable
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Moon, Bell, Globe, Lock, Info, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, Moon, Bell, Globe, Lock, Info, ChevronRight, DollarSign, CheckCircle, ChevronDown } from 'lucide-react-native'; // Add icons
 import { colors as Colors } from '@/constants/colors';
 import { useChatStore } from '@/store/chat-store';
+import { useCurrencyStore, SupportedCurrency } from '@/store/currency-store'; // Import currency store
 import { SUPPORTED_LANGUAGES } from '@/config/env';
 import LoadingOverlay from '@/components/LoadingOverlay';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { preferences, updatePreferences } = useChatStore();
+  const { currentCurrency, setCurrency } = useCurrencyStore(); // Use currency store
   const [isLoading, setIsLoading] = useState(false);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false); // State for dropdown
   
   // If preferences is undefined, show loading state
   if (!preferences) {
@@ -39,6 +44,12 @@ export default function SettingsScreen() {
   const handleLanguageChange = (language: string) => {
     updatePreferences({ language });
     Alert.alert('Language Updated', `App language has been changed to ${languageNames[language] || language}`);
+  };
+
+  const handleCurrencyChange = (currency: SupportedCurrency) => {
+    setCurrency(currency);
+    setShowCurrencyDropdown(false);
+    Alert.alert('Currency Updated', `Preferred currency set to ${currency}`);
   };
   
   const handleNotificationsToggle = () => {
@@ -94,6 +105,7 @@ export default function SettingsScreen() {
   }
   
   return (
+    <> 
     <SafeAreaView style={styles.container} edges={['top', 'right', 'left']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -133,6 +145,23 @@ export default function SettingsScreen() {
                 <Text style={styles.settingValue}>
                   {languageNames[preferences.language] || preferences.language || 'English'}
                 </Text>
+                <ChevronRight size={20} color={Colors.textLight} />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Currency Setting */}
+          <TouchableOpacity 
+            style={styles.settingItem}
+            onPress={() => setShowCurrencyDropdown(true)}
+          >
+            <View style={styles.settingIconContainer}>
+              <DollarSign size={20} color={Colors.text} />
+            </View>
+            <View style={styles.settingContent}>
+              <Text style={styles.settingLabel}>Preferred Currency</Text>
+              <View style={styles.settingAction}>
+                <Text style={styles.settingValue}>{currentCurrency}</Text>
                 <ChevronRight size={20} color={Colors.textLight} />
               </View>
             </View>
@@ -312,6 +341,41 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    
+    {/* Currency Selection Modal (Moved inside fragment) */}
+    <Modal
+      visible={showCurrencyDropdown}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setShowCurrencyDropdown(false)}
+    >
+      <Pressable 
+        style={styles.modalOverlay} 
+        onPress={() => setShowCurrencyDropdown(false)}
+      >
+        <View style={styles.dropdownModalContent}>
+          <Text style={styles.modalTitle}>Select Currency</Text>
+          {(['AED', 'USD', 'EUR', 'GBP', 'INR'] as SupportedCurrency[]).map((currency) => (
+            <TouchableOpacity 
+              key={currency} 
+              style={styles.dropdownItem}
+              onPress={() => handleCurrencyChange(currency)}
+            >
+              <Text style={[
+                styles.dropdownItemText,
+                currentCurrency === currency && styles.dropdownItemTextSelected
+              ]}>
+                {currency}
+              </Text>
+              {currentCurrency === currency && (
+                <CheckCircle size={16} color={Colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Pressable>
+    </Modal>
+    </> // Add fragment wrapper
   );
 }
 
@@ -392,6 +456,48 @@ const styles = StyleSheet.create({
   dangerText: {
     fontSize: 16,
     color: Colors.error,
+    fontWeight: '500',
+  },
+  // Add Modal and Dropdown styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModalContent: {
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    padding: 16,
+    width: '80%',
+    maxHeight: '60%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  dropdownItemTextSelected: {
+    color: Colors.primary,
     fontWeight: '500',
   },
 });

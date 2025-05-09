@@ -2,9 +2,9 @@ export const colors = {
   primary: '#6200EE', // Purple
   primaryLight: '#EDE7F6', // Light purple
   secondary: '#5856D6',
-  background: '#FFFFFF',
+  background: '#F0F0F0', // Changed from #FFFFFF to a light gray
   card: {
-    background: '#FFFFFF',
+    background: '#FFFFFF', // Kept as white for card elements
   },
   text: '#000000',
   textLight: '#666666',
