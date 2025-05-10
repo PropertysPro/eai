@@ -101,7 +101,7 @@ export default function SplashScreen() {
             ]}
           >
             <Text style={styles.appName}>{APP_NAME}</Text>
-            <Text style={styles.handwrittenTagline}>Buy Sell Intelligently</Text>
+            <Text style={styles.handwrittenTagline}>Buy Sell Rent Intelligently</Text>
             <Text style={styles.subTagline}>{APP_TAGLINE}</Text>
           </Animated.View>
           

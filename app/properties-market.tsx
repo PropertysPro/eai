@@ -87,8 +87,8 @@ const mockProperty: Property = {
 
 export default function PropertiesMarketPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth(); // Get auth loading state
+  const [isPageDataLoading, setIsPageDataLoading] = useState(true); // Page-specific data loading
   const [refreshing, setRefreshing] = useState(false);
 
   // Search Filter States
@@ -166,54 +166,74 @@ export default function PropertiesMarketPage() {
   };
 
   // States for different sections
-  const [realtors, setRealtors] = useState<User[]>([mockRealtor]); // Use User[] type
-  const [distressedDeals, setDistressedDeals] = useState<Property[]>([mockProperty]); // Placeholder
-  const [lastListedProperties, setLastListedProperties] = useState<Property[]>([mockProperty]); // Placeholder
-  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([mockProperty]); // Placeholder
-  const [urgentSaleRentProperties, setUrgentSaleRentProperties] = useState<Property[]>([mockProperty]); // Placeholder
+  // Initialize with empty arrays to clearly see when data is loaded vs initial/empty state
+  const [realtors, setRealtors] = useState<User[]>([]);
+  const [distressedDeals, setDistressedDeals] = useState<Property[]>([]);
+  const [lastListedProperties, setLastListedProperties] = useState<Property[]>([]);
+  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
+  const [urgentSaleRentProperties, setUrgentSaleRentProperties] = useState<Property[]>([]);
 
-  const loadPageData = useCallback(async (refresh = false) => { // Wrap loadPageData in useCallback
-    console.log('[PropertiesMarketPage] loadPageData called. Refresh:', refresh);
-    if (refresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  // Renamed to loadPageDataInternal to avoid confusion with previous versions
+  const loadPageDataInternal = useCallback(async () => { // This function ONLY fetches and sets data.
+    console.log('[PropertiesMarketPage] loadPageDataInternal called.');
     try {
       // TODO: Fetch actual data from services
-      // For now, using mock data with a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('[PropertiesMarketPage] About to set mock data states.');
-      setRealtors([mockRealtor]);
-      setDistressedDeals([mockProperty]);
-      setLastListedProperties([mockProperty, { ...mockProperty, id: '2', title: 'Another Villa' }]);
-      setFeaturedProperties([{ ...mockProperty, id: '3', title: 'Featured Condo' }]);
-      setUrgentSaleRentProperties([{ ...mockProperty, id: '4', title: 'Urgent Apartment' }]);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      
+      const timestamp = new Date().toLocaleTimeString(); // More readable timestamp
+      const dynamicMockRealtor = { ...mockRealtor, name: `John Doe (Updated: ${timestamp})` };
+      const dynamicMockProperty = { ...mockProperty, title: `Luxury Villa (Updated: ${timestamp})` };
+
+      console.log('[PropertiesMarketPage] Setting new mock data states.');
+      setRealtors([dynamicMockRealtor, { ...mockRealtor, id: 'realtorStatic2', name: 'Jane Static Smith' }]);
+      setDistressedDeals([dynamicMockProperty, { ...mockProperty, id: 'distressedStatic2', title: 'Static Deal X' }]);
+      setLastListedProperties([dynamicMockProperty, { ...mockProperty, id: 'lastListedStatic2', title: 'Static Last Prop Y' }]);
+      setFeaturedProperties([{ ...dynamicMockProperty, id: 'featuredStatic2', title: 'Static Featured Z' }]);
+      setUrgentSaleRentProperties([{ ...dynamicMockProperty, id: 'urgentStatic2', title: 'Static Urgent W' }]);
       console.log('[PropertiesMarketPage] Mock data states set.');
     } catch (error) {
       console.error('Error loading properties market data:', error);
       Alert.alert('Error', 'Could not load properties market data.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setRealtors([]);
+      setDistressedDeals([]);
+      setLastListedProperties([]);
+      setFeaturedProperties([]);
+      setUrgentSaleRentProperties([]);
     }
-  }, []); // Empty dependency array for useCallback as loadPageData itself doesn't depend on props/state from this scope
+  }, []); // mockRealtor and mockProperty are stable, setX functions are stable
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[PropertiesMarketPage] Screen focused, calling loadPageData.');
-      loadPageData(); // Call loadPageData unconditionally on focus
-
-      // Optional: Cleanup function when screen goes out of focus
-      // return () => {
-      //   console.log('[PropertiesMarketPage] Screen unfocused. Potential cleanup.');
-      // };
-    }, [loadPageData]) // loadPageData is stable due to its own useCallback([])
+      if (!isAuthLoading) { // Only proceed if auth context is not loading
+        console.log('[PropertiesMarketPage] Screen focused and auth is settled. Calling loadPageDataInternal.');
+        setIsPageDataLoading(true); 
+        loadPageDataInternal()
+          .catch(error => console.error("Error in focus effect load:", error))
+          .finally(() => {
+            setIsPageDataLoading(false);
+            console.log('[PropertiesMarketPage] Focus-triggered data load complete.');
+          });
+      } else {
+        console.log('[PropertiesMarketPage] Screen focused, but auth is still loading. Waiting for auth to settle.');
+        if (!isPageDataLoading) setIsPageDataLoading(true); 
+      }
+      
+      return () => {
+        // console.log('[PropertiesMarketPage] Screen unfocused.');
+      };
+    }, [isAuthLoading, loadPageDataInternal]) // Add isAuthLoading to dependencies
   );
 
-  const handleRefresh = () => {
-    loadPageData(true);
-  };
+  const handleRefresh = useCallback(() => {
+    console.log('[PropertiesMarketPage] Pull-to-refresh triggered. Setting refreshing true.');
+    setRefreshing(true); 
+    loadPageDataInternal()
+      .catch(error => console.error("Error in refresh load:", error))
+      .finally(() => {
+        setRefreshing(false); 
+        console.log('[PropertiesMarketPage] Refresh data load complete. Refreshing set to false.');
+      });
+  }, [loadPageDataInternal]);
 
   const handlePropertyPress = (property: Property) => {
     router.push(`/property-details/${property.id}`); // Assuming a similar route
@@ -224,7 +244,7 @@ export default function PropertiesMarketPage() {
     return (
     <View style={styles.sectionContainer}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      {properties.length === 0 && !loading ? (
+      {properties.length === 0 && !isPageDataLoading && !isAuthLoading ? (
         <Text style={styles.emptySectionText}>No properties found in this section.</Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
@@ -262,8 +282,8 @@ export default function PropertiesMarketPage() {
     </TouchableOpacity>
   );
 
-
-  if (loading && !refreshing) {
+  // Show loader if auth is loading OR page data is loading (and not a pull-to-refresh action)
+  if (isAuthLoading || (isPageDataLoading && !refreshing)) {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -406,7 +426,7 @@ export default function PropertiesMarketPage() {
         {/* Realtor Profiles Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Top Realtors</Text>
-          {realtors.length === 0 && !loading ? (
+          {realtors.length === 0 && !isPageDataLoading && !isAuthLoading ? (
             <Text style={styles.emptySectionText}>No realtors found.</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
@@ -443,6 +463,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingVertical: 16,
     paddingHorizontal: 8, // Add some horizontal padding to the main scroll view
+    flexGrow: 1, // Ensure content container grows to fill ScrollView
   },
   horizontalScrollContent: {
     paddingLeft: 16, // Start first card with padding

@@ -425,7 +425,7 @@ export default function DiscoverScreen() {
                   onPress={() => router.push('/(tabs)/chat')}
                 >
                   <MessageSquare size={18} color={Colors.primary} />
-                  <Text style={styles.actionButtonText}>Ask EAI Assistant</Text>
+                  <Text style={styles.actionButtonText}>Ask CemProp Assistant</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -458,14 +458,14 @@ export default function DiscoverScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Ask EAI Assistant Button */}
+          {/* Ask CemProp Assistant Button */}
           <View style={styles.askEAIContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.askEAIButton}
               onPress={() => router.push('/(tabs)/chat')}
             >
               <MessageSquare size={18} color="white" />
-              <Text style={styles.askEAIButtonText}>Ask EAI Assistant</Text>
+              <Text style={styles.askEAIButtonText}>Ask CemProp Assistant</Text>
             </TouchableOpacity>
           </View>
         </View>

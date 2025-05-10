@@ -6,7 +6,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url'; // Added for ES module __dirname equivalent
-import { connectDB } from './config/database';
+import { connectDB } from './config/database.js';
 
 // Load environment variables
 dotenv.config();

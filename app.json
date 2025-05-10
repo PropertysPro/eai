@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Real Estate AI",
-    "slug": "real-estate-ai",
+    "name": "Cem Prop",
+    "slug": "cem-prop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,14 +17,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.propertyspro.realestate"
+      "bundleIdentifier": "com.propertyspro.cemprop"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.propertyspro.realestate"
+      "package": "com.propertyspro.cemprop"
     },
     "web": {
       "bundler": "metro",

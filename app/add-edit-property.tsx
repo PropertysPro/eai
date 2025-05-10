@@ -619,72 +619,6 @@ export default function AddEditPropertyScreen() {
         <Text style={styles.sectionTitle}>Basic Information</Text>
       </View>
 
-      {/* Title */}
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Title</Text>
-        <TextInput
-          style={[
-            styles.input, 
-            errors.title && touchedFields.title && styles.inputError,
-            touchedFields.title && !errors.title && styles.inputSuccess
-          ]}
-          value={title}
-          onChangeText={setTitle}
-          onBlur={() => handleFieldBlur('title', title)}
-          placeholder="Enter property title"
-          placeholderTextColor={Colors.textLight}
-        />
-        {errors.title && touchedFields.title && (
-          <Text style={styles.errorText}>{errors.title}</Text>
-        )}
-      </View>
-
-      {/* Description */}
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[
-            styles.textArea, 
-            errors.description && touchedFields.description && styles.inputError,
-            touchedFields.description && !errors.description && styles.inputSuccess
-          ]}
-          value={description}
-          onChangeText={setDescription}
-          onBlur={() => handleFieldBlur('description', description)}
-          placeholder="Describe the property"
-          placeholderTextColor={Colors.textLight}
-          multiline
-          numberOfLines={4}
-        />
-        {errors.description && touchedFields.description && (
-          <Text style={styles.errorText}>{errors.description}</Text>
-        )}
-      </View>
-
-      {/* Price */}
-      <View style={styles.formGroup}>
-        <View style={styles.labelContainer}>
-          <DollarSign size={16} color={Colors.primary} style={styles.labelIcon} />
-          <Text style={styles.label}>Price (AED)</Text>
-        </View>
-        <TextInput
-          style={[
-            styles.input, 
-            errors.price && touchedFields.price && styles.inputError,
-            touchedFields.price && !errors.price && styles.inputSuccess
-          ]}
-          value={price}
-          onChangeText={setPrice}
-          onBlur={() => handleFieldBlur('price', price)}
-          placeholder="Enter price"
-          placeholderTextColor={Colors.textLight}
-          keyboardType="numeric"
-        />
-        {errors.price && touchedFields.price && (
-          <Text style={styles.errorText}>{errors.price}</Text>
-        )}
-      </View>
-
       {/* Listing Type */}
       <View style={styles.formGroup}>
         <Text style={styles.label}>Listing Type</Text>
@@ -763,6 +697,150 @@ export default function AddEditPropertyScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        )}
+      </View>
+
+      {/* Construction Status */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Construction Status</Text>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => {
+            closeAllDropdowns();
+            setShowConstructionStatusDropdown(!showConstructionStatusDropdown);
+          }}
+        >
+          <Text style={styles.dropdownButtonText}>{construction_status === 'ready' ? 'Ready' : 'Off Plan'}</Text>
+          <ChevronDown size={20} color={Colors.text} />
+        </TouchableOpacity>
+        {showConstructionStatusDropdown && (
+          <View style={styles.dropdownMenu}>
+            {(['ready', 'off_plan'] as const).map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setConstructionStatus(status);
+                  setShowConstructionStatusDropdown(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  construction_status === status && styles.dropdownItemTextSelected
+                ]}>
+                  {status === 'ready' ? 'Ready' : 'Off Plan'}
+                </Text>
+                {construction_status === status && (
+                  <CheckCircle size={16} color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Market Status */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Market Status</Text>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => {
+            closeAllDropdowns();
+            setShowMarketStatusDropdown(!showMarketStatusDropdown);
+          }}
+        >
+          <Text style={styles.dropdownButtonText}>{market_status === 'new_to_market' ? 'New to Market' : 'Resale'}</Text>
+          <ChevronDown size={20} color={Colors.text} />
+        </TouchableOpacity>
+        {showMarketStatusDropdown && (
+          <View style={styles.dropdownMenu}>
+            {(['new_to_market', 'resale'] as const).map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setMarketStatus(status);
+                  setShowMarketStatusDropdown(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  market_status === status && styles.dropdownItemTextSelected
+                ]}>
+                  {status === 'new_to_market' ? 'New to Market' : 'Resale'}
+                </Text>
+                {market_status === status && (
+                  <CheckCircle size={16} color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Title */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          style={[
+            styles.input, 
+            errors.title && touchedFields.title && styles.inputError,
+            touchedFields.title && !errors.title && styles.inputSuccess
+          ]}
+          value={title}
+          onChangeText={setTitle}
+          onBlur={() => handleFieldBlur('title', title)}
+          placeholder="Enter property title"
+          placeholderTextColor={Colors.textLight}
+        />
+        {errors.title && touchedFields.title && (
+          <Text style={styles.errorText}>{errors.title}</Text>
+        )}
+      </View>
+
+      {/* Description */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[
+            styles.textArea, 
+            errors.description && touchedFields.description && styles.inputError,
+            touchedFields.description && !errors.description && styles.inputSuccess
+          ]}
+          value={description}
+          onChangeText={setDescription}
+          onBlur={() => handleFieldBlur('description', description)}
+          placeholder="Describe the property"
+          placeholderTextColor={Colors.textLight}
+          multiline
+          numberOfLines={4}
+        />
+        {errors.description && touchedFields.description && (
+          <Text style={styles.errorText}>{errors.description}</Text>
+        )}
+      </View>
+
+      {/* Price */}
+      <View style={styles.formGroup}>
+        <View style={styles.labelContainer}>
+          <DollarSign size={16} color={Colors.primary} style={styles.labelIcon} />
+          <Text style={styles.label}>Price (AED)</Text>
+        </View>
+        <TextInput
+          style={[
+            styles.input, 
+            errors.price && touchedFields.price && styles.inputError,
+            touchedFields.price && !errors.price && styles.inputSuccess
+          ]}
+          value={price}
+          onChangeText={setPrice}
+          onBlur={() => handleFieldBlur('price', price)}
+          placeholder="Enter price"
+          placeholderTextColor={Colors.textLight}
+          keyboardType="numeric"
+        />
+        {errors.price && touchedFields.price && (
+          <Text style={styles.errorText}>{errors.price}</Text>
         )}
       </View>
     </Animated.View>
@@ -1060,84 +1138,6 @@ export default function AddEditPropertyScreen() {
             thumbColor={isNegotiable ? Colors.primary : Colors.textLight}
           />
         </View>
-      </View>
-
-      {/* Construction Status */}
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Construction Status</Text>
-        <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={() => {
-            closeAllDropdowns();
-            setShowConstructionStatusDropdown(!showConstructionStatusDropdown);
-          }}
-        >
-          <Text style={styles.dropdownButtonText}>{construction_status === 'ready' ? 'Ready' : 'Off Plan'}</Text>
-          <ChevronDown size={20} color={Colors.text} />
-        </TouchableOpacity>
-        {showConstructionStatusDropdown && (
-          <View style={styles.dropdownMenu}>
-            {(['ready', 'off_plan'] as const).map((status) => (
-              <TouchableOpacity
-                key={status}
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setConstructionStatus(status);
-                  setShowConstructionStatusDropdown(false);
-                }}
-              >
-                <Text style={[
-                  styles.dropdownItemText,
-                  construction_status === status && styles.dropdownItemTextSelected
-                ]}>
-                  {status === 'ready' ? 'Ready' : 'Off Plan'}
-                </Text>
-                {construction_status === status && (
-                  <CheckCircle size={16} color={Colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-
-      {/* Market Status */}
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Market Status</Text>
-        <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={() => {
-            closeAllDropdowns();
-            setShowMarketStatusDropdown(!showMarketStatusDropdown);
-          }}
-        >
-          <Text style={styles.dropdownButtonText}>{market_status === 'new_to_market' ? 'New to Market' : 'Resale'}</Text>
-          <ChevronDown size={20} color={Colors.text} />
-        </TouchableOpacity>
-        {showMarketStatusDropdown && (
-          <View style={styles.dropdownMenu}>
-            {(['new_to_market', 'resale'] as const).map((status) => (
-              <TouchableOpacity
-                key={status}
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setMarketStatus(status);
-                  setShowMarketStatusDropdown(false);
-                }}
-              >
-                <Text style={[
-                  styles.dropdownItemText,
-                  market_status === status && styles.dropdownItemTextSelected
-                ]}>
-                  {status === 'new_to_market' ? 'New to Market' : 'Resale'}
-                </Text>
-                {market_status === status && (
-                  <CheckCircle size={16} color={Colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
       </View>
 
       {/* Marketplace Listing */}

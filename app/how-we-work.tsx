@@ -49,14 +49,14 @@ export default function HowWeWorkScreen() {
             <AnimatedBubble isActive={bubbleActive} size={150} />
           </View>
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>EAI</Text>
+            <Text style={styles.heroTitle}>CemProp</Text>
             <Text style={styles.heroSubtitle}>Your AI-powered real estate assistant</Text>
           </View>
         </View>
         
-        <Text style={styles.title}>How EAI Works</Text>
+        <Text style={styles.title}>How CemProp Works</Text>
         <Text style={styles.subtitle}>
-          EAI uses advanced artificial intelligence to help you find your perfect property
+          CemProp uses advanced artificial intelligence to help you find your perfect property
         </Text>
         
         <View style={styles.featuresContainer}>
@@ -80,7 +80,7 @@ export default function HowWeWorkScreen() {
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>Natural Conversations</Text>
               <Text style={styles.featureDescription}>
-                Simply chat with EAI as you would with a real estate agent. Ask questions, 
+                Simply chat with CemProp as you would with a real estate agent. Ask questions, 
                 describe what you're looking for, and get personalized recommendations.
               </Text>
             </View>
@@ -94,7 +94,7 @@ export default function HowWeWorkScreen() {
               <Text style={styles.featureTitle}>Property Management</Text>
               <Text style={styles.featureDescription}>
                 List your properties, track inquiries, and manage viewings all in one place. 
-                EAI helps you stay organized whether you're buying, selling, or renting.
+                CemProp helps you stay organized whether you're buying, selling, or renting.
               </Text>
             </View>
           </View>
@@ -129,7 +129,7 @@ export default function HowWeWorkScreen() {
         <View style={styles.infoContainer}>
           <Text style={styles.infoTitle}>Our Technology</Text>
           <Text style={styles.infoText}>
-            EAI is built on state-of-the-art natural language processing and machine learning 
+            CemProp is built on state-of-the-art natural language processing and machine learning 
             technologies. Our AI is continuously trained on real estate data to provide the most 
             accurate and helpful assistance possible.
             {"\n\n"}
