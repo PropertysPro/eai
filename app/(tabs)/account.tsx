@@ -88,11 +88,10 @@ export default function AccountScreen() {
             <View style={styles.profileSection}>
               <View style={styles.profileHeader}>
                 <View style={styles.avatarContainer}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                    </Text>
-                  </View>
+                  <Image
+                    source={require('@/assets/favicon-logo.png')}
+                    style={styles.avatar}
+                  />
                 </View>
                 <View style={styles.profileInfo}>
                   <Text style={styles.userName}>{user?.name || 'User'}</Text>
@@ -302,14 +301,6 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
   },
   profileInfo: {
     flex: 1,

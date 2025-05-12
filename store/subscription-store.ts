@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SubscriptionPlan } from '@/types/chat';
+import SubscriptionPlan from '../app/subscription';
 
 interface SubscriptionState {
   currentPlanId: string | null;
@@ -12,20 +12,20 @@ interface SubscriptionState {
   // Actions
   setCurrentPlan: (planId: string) => void;
   setUserCurrency: (currency: string) => void;
-  getPlansInUserCurrency: () => SubscriptionPlan[];
-  getCurrentPlan: () => SubscriptionPlan | null;
+  getPlansInUserCurrency: () => typeof SubscriptionPlan[];
+  getCurrentPlan: () => typeof SubscriptionPlan | null;
   isPremiumUser: () => boolean;
   getMessageLimit: () => number;
 }
 
 // Define subscription plans
-const SUBSCRIPTION_PLANS: Record<string, Record<string, SubscriptionPlan[]>> = {
+const SUBSCRIPTION_PLANS: Record<string, Record<string, typeof SubscriptionPlan[]>> = {
   USD: {
     plans: [
       {
         id: 'free',
         name: 'Free',
-        price: '$0/month',
+        price: 'AED0/month',
         priceValue: 0,
         currency: 'USD',
         features: [

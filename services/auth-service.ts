@@ -1068,48 +1068,92 @@ export const completeOnboarding = async (): Promise<User> => {
 };
 
 
-// Function to upload profile picture
-export const uploadProfilePicture = async (userId: string, uri: string): Promise<string | null> => {
+// Helper to convert base64 to Blob
+const base64ToBlob = (base64: string, contentType: string = '', sliceSize: number = 512) => {
   try {
-    console.log('[Auth Service] Uploading profile picture for user:', userId);
+    // Ensure base64 string doesn't have data URI prefix if not needed by atob,
+    // or handle it if atob expects pure base64.
+    // Expo's base64 is typically pure, without "data:image/jpeg;base64,".
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      const slice = byteCharacters.slice(offset, offset + sliceSize);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    return new Blob(byteArrays, { type: contentType });
+  } catch (e) {
+    console.error("Error in base64ToBlob:", e);
+    return null;
+  }
+};
+
+// Function to upload profile picture
+export const uploadProfilePicture = async (userId: string, uri: string, base64String?: string): Promise<string | null> => {
+  try {
+    console.log('[Auth Service] Uploading profile picture to storage for user:', userId, 'URI:', uri);
     
-    const fileExt = uri.split('.').pop();
+    const fileExt = uri.split('.').pop() || 'jpeg'; // Default to jpeg if pop fails
+    const contentType = `image/${fileExt}`;
     const fileName = `${userId}_${Date.now()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
+    const filePath = `avatars/${fileName}`; // Path within the bucket
     
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    let blob: Blob | null = null;
+
+    if (base64String) {
+      console.log('[Auth Service] Attempting to create blob from base64 string.');
+      blob = base64ToBlob(base64String, contentType);
+      if (!blob) {
+        console.error('[Auth Service] Failed to convert base64 to Blob.');
+        // Optionally, try to fall back to URI fetch or just return null
+      }
+    }
     
-    const { data, error } = await supabase.storage
-      .from('profiles')
+    // Fallback or if base64 conversion failed (and blob is still null)
+    if (!blob) {
+      console.log('[Auth Service] Base64 not available or failed, attempting to fetch from URI (might fail on web).');
+      const response = await fetch(uri); // This is the line that previously failed on web
+      blob = await response.blob();
+    }
+    
+    if (!blob) {
+      console.error('[Auth Service] Could not create blob from URI or base64.');
+      return null;
+    }
+    
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('profiles') // Assuming 'profiles' is the BUCKET name for avatars.
       .upload(filePath, blob, {
         contentType: `image/${fileExt}`,
         upsert: true
       });
     
-    if (error) {
-      console.error('[Auth Service] Error uploading profile picture to Supabase Storage:', error.message);
+    if (uploadError) {
+      console.error('[Auth Service] Error uploading profile picture to Supabase Storage:', uploadError.message);
       return null; 
     }
     
+    // Get public URL of the uploaded file
     const { data: urlData } = supabase.storage
-      .from('profiles')
+      .from('profiles') // Bucket name
       .getPublicUrl(filePath);
+
+    if (!urlData || !urlData.publicUrl) {
+        console.error('[Auth Service] Error getting public URL for uploaded avatar.');
+        return null;
+    }
     
     const publicUrl = urlData.publicUrl;
     
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ avatar: publicUrl })
-      .eq('id', userId);
+    console.log('[Auth Service] Profile picture uploaded to storage successfully:', publicUrl);
+    return publicUrl; // Return only the URL, database update will be handled by updateProfile
     
-    if (updateError) {
-      console.error('[Auth Service] Error updating profile table with new avatar URL:', updateError.message);
-      return null;
-    }
-    
-    console.log('[Auth Service] Profile picture uploaded and profile updated successfully:', publicUrl);
-    return publicUrl;
   } catch (error: any) {
     console.error('[Auth Service] General error in uploadProfilePicture (e.g., network, blob conversion):', error.message);
     return null; 

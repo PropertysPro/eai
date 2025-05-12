@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Check } from 'lucide-react-native';
-import { SubscriptionPlan } from '@/types/chat';
+import SubscriptionPlan from '../app/subscription';
 import { colors as Colors } from '@/constants/colors';
 
 interface SubscriptionCardProps {

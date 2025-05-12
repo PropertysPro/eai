@@ -44,8 +44,8 @@ import * as authService from '@/services/auth-service';
 // Define supported currencies
 const SUPPORTED_CURRENCIES = ['AED', 'USD', 'EUR', 'GBP', 'INR'];
 
-// Sample avatar URL - replace with actual user avatar when available
-const DEFAULT_AVATAR = 'https://randomuser.me/api/portraits/men/32.jpg';
+// Use local favicon as the default avatar
+const DEFAULT_AVATAR = require('@/assets/favicon-logo.png');
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -109,20 +109,35 @@ export default function ProfileScreen() {
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images', allowsEditing: true, aspect: [1, 1], quality: 0.7,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Use enum for clarity
+        allowsEditing: true, 
+        aspect: [1, 1], 
+        quality: 0.7,
+        base64: true, // Request base64 data
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedImage = result.assets[0];
         setIsUploadingImage(true);
         try {
-          const imageUrl = await authService.uploadProfilePicture(user?.id || '', selectedImage.uri);
-          if (imageUrl) {
-            setFormData(prev => ({ ...prev, avatar: imageUrl }));
-            Alert.alert('Success', 'Profile picture updated successfully');
+          // Step 1: Upload image to storage and get URL
+          // Pass both URI and base64 data (ensuring null is converted to undefined) to the service function
+          const newImageUrl = await authService.uploadProfilePicture(user?.id || '', selectedImage.uri, selectedImage.base64 || undefined);
+          console.log('[Profile] New image URL from uploadProfilePicture:', newImageUrl); // <-- ADD LOG
+          
+          if (newImageUrl) {
+            // Step 2: Update the profile in the database and auth context with the new avatar URL
+            // This will also trigger the useEffect to update formData.avatar if `user` object changes
+            console.log('[Profile] Calling updateProfile with avatar:', newImageUrl); // <-- ADD LOG
+            await updateProfile({ avatar: newImageUrl }); 
+            // No need to call setFormData here directly for avatar, 
+            // as useEffect listening to `user` changes will handle it.
+            Alert.alert('Success', 'Profile picture updated successfully. Save changes to persist other edits.');
+          } else {
+            Alert.alert('Error', 'Failed to upload profile picture. The image URL was not returned.');
           }
         } catch (error: any) {
-          console.error('[Profile] Error uploading profile picture:', error);
-          Alert.alert('Error', error.message || 'Failed to upload profile picture');
+          console.error('[Profile] Error uploading profile picture or updating profile:', error);
+          Alert.alert('Error', error.message || 'Failed to update profile picture.');
         } finally {
           setIsUploadingImage(false);
         }
@@ -136,6 +151,7 @@ export default function ProfileScreen() {
   // Initialize form data from user object
   useEffect(() => {
     if (user) {
+      console.log('[Profile] useEffect triggered by user change. User avatar from context:', user.avatar); // <-- ADD LOG
       let firstName = '';
       let lastName = '';
       if (user.name) {
@@ -159,7 +175,7 @@ export default function ProfileScreen() {
         isNegotiable: user.preferences?.isNegotiable || false,
         pushNotifications: user.preferences?.notifications?.matches || false,
         darkMode: user.preferences?.darkMode || false,
-        avatar: user.avatar || DEFAULT_AVATAR,
+        avatar: DEFAULT_AVATAR,
         reraLicenseNumber: user.reraLicenseNumber || '',
         dldLicenseNumber: user.dldLicenseNumber || '',
         admLicenseNumber: user.admLicenseNumber || '',
@@ -357,7 +373,10 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: formData.avatar }} style={styles.avatar} />
+            <Image
+              source={typeof formData.avatar === 'string' ? { uri: formData.avatar } : formData.avatar}
+              style={styles.avatar}
+            />
             <TouchableOpacity style={styles.editAvatarButton} onPress={handlePickImage} disabled={isUploadingImage}>
               {isUploadingImage ? <ActivityIndicator size="small" color="#fff" /> : <Camera size={18} color="#fff" />}
             </TouchableOpacity>
@@ -616,7 +635,10 @@ export default function ProfileScreen() {
             </View>
             {(user.reviews && user.reviews.length > 0 ? user.reviews : mockReviews).map((review, index) => (
               <View key={review.id || index} style={styles.reviewItem}>
-                <Image source={{ uri: review.reviewerAvatar || DEFAULT_AVATAR }} style={styles.reviewerAvatar} />
+                <Image 
+                  source={review.reviewerAvatar ? { uri: review.reviewerAvatar } : DEFAULT_AVATAR} 
+                  style={styles.reviewerAvatar} 
+                />
                 <View style={styles.reviewContent}>
                   <View style={styles.reviewHeader}>
                     <Text style={styles.reviewerName}>{review.reviewerName}</Text>

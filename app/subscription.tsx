@@ -18,9 +18,11 @@ interface SubscriptionPlan {
   id: string;
   name: string;
   price: string;
+  currency: string;
   description: string;
   features: string[];
-  popular?: boolean;
+  duration?: 'month' | '6months' | 'year';
+  isPopular?: boolean;
 }
 
 const subscriptionPlans: SubscriptionPlan[] = [
@@ -28,6 +30,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     id: 'free',
     name: 'Free',
     price: '0',
+    currency: 'USD',
     description: 'Basic access to real estate assistant',
     features: [
       'Up to 10 messages per day',
@@ -40,6 +43,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     id: 'pro',
     name: 'Pro',
     price: '9.99',
+    currency: 'USD',
     description: 'Enhanced features for serious buyers',
     features: [
       'Unlimited messages',
@@ -48,12 +52,13 @@ const subscriptionPlans: SubscriptionPlan[] = [
       'Market analysis reports',
       'Priority email support'
     ],
-    popular: true
+    isPopular: true
   },
   {
     id: 'premium',
     name: 'Premium',
     price: '19.99',
+    currency: 'USD',
     description: 'Complete solution for real estate professionals',
     features: [
       'All Pro features',
@@ -137,12 +142,12 @@ export default function SubscriptionScreen() {
               style={[
                 styles.planCard,
                 selectedPlan === plan.id && styles.selectedPlanCard,
-                plan.popular && styles.popularPlanCard
+                plan.isPopular && styles.popularPlanCard
               ]}
               onPress={() => handleSelectPlan(plan.id)}
               activeOpacity={0.8}
             >
-              {plan.popular && (
+              {plan.isPopular && (
                 <View style={styles.popularBadge}>
                   <Text style={styles.popularBadgeText}>Popular</Text>
                 </View>

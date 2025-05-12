@@ -38,7 +38,7 @@ import * as authService from '@/services/auth-service'; // For fetching user dat
 import { propertyService } from '@/services/property-service'; // For fetching properties
 import PropertyCard from '@/components/PropertyCard'; // Assuming a PropertyCard component exists
 
-const DEFAULT_AVATAR = 'https://randomuser.me/api/portraits/men/32.jpg'; // Fallback avatar
+const DEFAULT_AVATAR = require('@/assets/favicon-logo.png'); // Fallback avatar
 
 // StarRating Component
 interface StarRatingProps {
@@ -211,7 +211,10 @@ export default function PublicProfileScreen() {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.profileHeader}>
-          <Image source={{ uri: profileUser.avatar || DEFAULT_AVATAR }} style={styles.avatar} />
+          <Image 
+            source={profileUser.avatar ? { uri: profileUser.avatar } : DEFAULT_AVATAR} 
+            style={styles.avatar} 
+          />
           {profileUser.averageRating !== undefined && profileUser.averageRating > 0 && (
             <View style={styles.ratingContainer}>
               <StarRating rating={profileUser.averageRating} starSize={20} />
