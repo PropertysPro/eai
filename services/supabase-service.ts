@@ -1,4 +1,4 @@
-import supabase from '@/config/supabase';
+import { supabase } from '@/config/supabase';
 
 // Export Supabase-related functions here
 export const getUser = async (userId: string) => {
@@ -20,6 +20,76 @@ export const getUser = async (userId: string) => {
     return data;
   } catch (error: any) {
     console.error('[Supabase Service] Error getting user:', error.message);
+    throw error;
+  }
+};
+
+export const getUsersWithChatSessions = async () => {
+  try {
+    console.log('[Supabase Service] Getting users with chat sessions');
+
+    const { data, error } = await supabase
+      .from('chat_sessions')
+      .select('user_id')
+      .order('user_id', { ascending: true })
+      .throwOnError();
+
+    if (error) {
+      console.error('[Supabase Service] Error getting users with chat sessions:', error);
+      throw error;
+    }
+
+    const distinctUserIds = data ? [...new Set(data.map(item => item.user_id))] : [];
+
+    console.log('[Supabase Service] Successfully retrieved users with chat sessions');
+    return distinctUserIds;
+  } catch (error: any) {
+    console.error('[Supabase Service] Error getting users with chat sessions:', error.message);
+    throw error;
+  }
+};
+
+export const getUserProfile = async (userId: string) => {
+  try {
+    console.log('[Supabase Service] Getting user profile with ID:', userId);
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('[Supabase Service] Error getting user profile:', error.message);
+      throw error;
+    }
+
+    console.log('[Supabase Service] Successfully retrieved user profile:', data);
+    return data;
+  } catch (error: any) {
+    console.error('[Supabase Service] Error getting user profile:', error.message);
+    throw error;
+  }
+};
+
+export const getAllChatMessages = async () => {
+  try {
+    console.log('[Supabase Service] Getting all chat messages for admin');
+
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Supabase Service] Error getting all chat messages:', error.message);
+      throw error;
+    }
+
+    console.log('[Supabase Service] Successfully retrieved all chat messages');
+    return data;
+  } catch (error: any) {
+    console.error('[Supabase Service] Error getting all chat messages:', error.message);
     throw error;
   }
 };
@@ -157,6 +227,51 @@ export const createUserProfile = async (userId: string, email: string, name?: st
     return data?.[0];
   } catch (error: any) {
     console.error('[Supabase Service] Error creating user profile:', error.message);
+    throw error;
+  }
+};
+
+export const deleteChatMessage = async (messageId: string) => {
+  try {
+    console.log('[Supabase Service] Deleting chat message with ID:', messageId);
+
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (error) {
+      console.error('[Supabase Service] Error deleting chat message:', error.message);
+      throw error;
+    }
+
+    console.log('[Supabase Service] Successfully deleted chat message with ID:', messageId);
+    return true;
+  } catch (error: any) {
+    console.error('[Supabase Service] Error deleting chat message:', error.message);
+    throw error;
+  }
+};
+
+export const getAllProperties = async () => {
+  console.log('[Supabase Service] getAllProperties called');
+  try {
+    console.log('[Supabase Service] Getting all properties');
+
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Supabase Service] Error getting all properties:', error.message);
+      throw error;
+    }
+
+    console.log('[Supabase Service] Successfully retrieved all properties', data);
+    return data;
+  } catch (error: any) {
+    console.error('[Supabase Service] Error getting all properties:', error.message);
     throw error;
   }
 };

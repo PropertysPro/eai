@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform, View, Text, StyleSheet } from 'react-native';
-import { Home, Search, MessageSquare, User, Bell, ShoppingBag, Store } from 'lucide-react-native'; // Added Store
+import { Home, Search, MessageSquare, User, Bell, ShoppingBag, Store, Briefcase } from 'lucide-react-native'; // Added Store, Briefcase
 import { colors as Colors } from '@/constants/colors';
 import { useNotifications } from '@/store/notification-store';
 
@@ -63,10 +63,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="properties-market"
+        name="properties-market-hub"
         options={{
-          title: 'Properties Market',
-          tabBarIcon: ({ color }) => <Store size={22} color={color} />,
+          title: 'Properties Hub',
+          tabBarIcon: ({ color }) => <Briefcase size={22} color={color} />,
           headerShown: false,
         }}
       />

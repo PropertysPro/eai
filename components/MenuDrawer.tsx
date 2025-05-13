@@ -31,6 +31,7 @@ import {
   ShoppingBag,
   Wallet,
   Store, // Added Store icon
+  Briefcase, // Added Briefcase icon
 } from 'lucide-react-native';
 import { colors as Colors } from '@/constants/colors';
 import { useAuth } from '@/context/auth-context';
@@ -195,9 +196,9 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
             />
 
             <MenuItem
-              icon={<Store size={22} color={Colors.text} />}
-              label="Properties Market"
-              onPress={() => handleNavigation('/(tabs)/properties-market')}
+              icon={<Briefcase size={22} color={Colors.text} />}
+              label="Properties Hub"
+              onPress={() => handleNavigation('/(tabs)/properties-market-hub')}
             />
             
             {isAuthenticated && (
@@ -230,13 +231,19 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
                   label="Chat History"
                   onPress={() => handleNavigation('/history')}
                 />
+
+                 <MenuItem
+                  icon={<Store size={22} color={Colors.text} />}
+                  label="Admin Chat"
+                  onPress={() => handleNavigation('/admin/chat')}
+                />
               </>
             )}
             
             {/* Property Management - only for authenticated users */}
             {isAuthenticated && (
               <>
-                <SectionHeader title="Property Management" />
+                <SectionHeader title="Property Management"/>
                 <MenuItem 
                   icon={<AlertTriangle size={22} color={Colors.text} />}
                   label="Distressed Deals"

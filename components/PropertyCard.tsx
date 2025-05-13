@@ -259,37 +259,42 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: Colors.text,
+    textAlign: 'center', // Center the price
   },
   typeBadge: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.subscription.premium, // Use premium color
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
   },
   typeText: {
-    color: Colors.primary,
+    color: Colors.text,
     fontSize: 12,
     fontWeight: '500',
+    textAlign: 'center', // Center the type text
   },
   title: {
     fontSize: 16,
     fontWeight: '500',
     color: Colors.text,
     marginBottom: 4,
+    textAlign: 'center', // Center the title
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    justifyContent: 'center', // Center the location row
   },
   location: {
     fontSize: 14,
     color: Colors.textLight,
     marginLeft: 4,
+    textAlign: 'center', // Center the location text
   },
   detailsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around', // Distribute details evenly
     marginTop: 8,
   },
   detailItem: {

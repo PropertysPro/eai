@@ -51,6 +51,9 @@ import * as authService from '@/services/auth-service';
 import { User as UserType } from '@/types/user';
 import { supabase } from '@/config/supabase';
 import { ChatMessage } from '@/types/chat';
+import { Property } from '@/types/property';
+import { getAllProperties } from '@/services/supabase-service';
+import { useAuth } from '@/context/auth-context';
 
 // Extended ChatSession type with user information
 interface ChatSession {
@@ -193,6 +196,7 @@ const defaultAdminUser: UserType = {
 };
 
 export default function AdminPanel() {
+  console.log('[AdminPanel] Component rendered');
   const router = useRouter(); // Initialize router
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -214,7 +218,65 @@ export default function AdminPanel() {
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [selectedChatSession, setSelectedChatSession] = useState<ChatSession | null>(null);
   const [chatModalVisible, setChatModalVisible] = useState(false);
-  
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
+  const [searchPropertiesQuery, setSearchPropertiesQuery] = useState('');
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      setIsLoadingProperties(true);
+      try {
+        const propertiesData = await getAllProperties();
+        setProperties(propertiesData || []);
+        setFilteredProperties(propertiesData || []);
+      } catch (error) {
+        console.error('Error fetching properties:', error);
+        Alert.alert('Error', 'Failed to load properties from database.');
+      } finally {
+        setIsLoadingProperties(false);
+      }
+    };
+
+    const loadData = async () => {
+      setIsLoadingUsers(true);
+      setIsLoadingChats(true);
+      setIsLoadingProperties(true);
+      
+      try {
+        // Fetch users
+        const fetchedUsers = await fetchUsers();
+        
+        // If no users were fetched, add the default admin user
+        if (fetchedUsers.length === 0) {
+          setUsers([defaultAdminUser]);
+        } else {
+          setUsers(fetchedUsers);
+        }
+        
+        // Fetch chat sessions
+        const fetchedChatSessions = await fetchChatSessions();
+        setChatSessions(fetchedChatSessions);
+        setFilteredChatSessions(fetchedChatSessions);
+
+        // Fetch properties
+        await fetchProperties();
+        
+      } catch (error) {
+        console.error('[Admin Panel] Error loading data:', error);
+        // Use default admin user as fallback
+        setUsers([defaultAdminUser]);
+        Alert.alert('Error', 'Failed to load data from database.');
+      } finally {
+        setIsLoadingUsers(false);
+        setIsLoadingChats(false);
+        setIsLoadingProperties(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+
   // New user form state
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -241,10 +303,10 @@ export default function AdminPanel() {
         throw error;
       }
       
-      console.log(`[Admin Panel] Successfully fetched ${data?.length} chat sessions`);
+      console.log(`[Admin Panel] Successfully fetched ${data?.length} chat sessions`, data);
       
       // Transform the data to match our ChatSession type
-      const chatSessions: ChatSession[] = data.map(session => ({
+      const chatSessions: ChatSession[] = data?.map(session => ({
         id: session.id,
         title: session.title,
         createdAt: session.created_at,
@@ -1015,235 +1077,234 @@ export default function AdminPanel() {
     }
   };
   
-  const renderConversations = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.sectionTitle}>Conversation Management</Text>
+  const renderConversations = () => {
+    const { isAdmin } = useAuth();
+    const filteredSessions = isAdmin
+      ? chatSessions
+      : chatSessions.filter(session => !session.isAdminChat);
       
-      <View style={styles.searchContainer}>
-        <Search size={20} color={Colors.textLight} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search conversations by title or user..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-      
-      {isLoadingChats ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+    console.log('[Admin Panel] isAdmin:', isAdmin);
+    console.log('[Admin Panel] filteredSessions:', filteredSessions);
+
+    return (
+      <View style={styles.tabContent}>
+        <Text style={styles.sectionTitle}>Conversation Management</Text>
+
+        <View style={styles.searchContainer}>
+          <Search size={20} color={Colors.textLight} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search conversations by title or user..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
-      ) : filteredChatSessions.length === 0 ? (
-        <View style={styles.noResultsContainer}>
-          <MessageSquare size={40} color={Colors.textLight} />
-          <Text style={styles.noResultsText}>
-            {searchQuery.trim() ? 
-              `No conversations found matching "${searchQuery}"` : 
-              'No conversations found'
-            }
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.conversationsList}>
-          {filteredChatSessions.map(session => (
-            <View key={session.id} style={styles.conversationItem}>
-              <View style={styles.conversationInfo}>
-                <View style={styles.conversationHeader}>
-                  <Text style={styles.conversationUser}>{session.user?.name || 'Unknown User'}</Text>
-                  {session.isAdminChat && (
-                    <View style={styles.adminChatBadge}>
-                      <Text style={styles.adminChatBadgeText}>ADMIN CHAT</Text>
-                    </View>
-                  )}
+
+        {isLoadingChats ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Loading conversations...</Text>
+          </View>
+        ) : filteredSessions.length === 0 ? (
+          <View style={styles.noResultsContainer}>
+            <MessageSquare size={40} color={Colors.textLight} />
+            <Text style={styles.noResultsText}>
+              {searchQuery.trim() ?
+                `No conversations found matching "${searchQuery}"` :
+                'No conversations found'
+              }
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.conversationsList}>
+            {filteredSessions.map(session => (
+              <View key={session.id} style={styles.conversationItem}>
+                <View style={styles.conversationInfo}>
+                  <View style={styles.conversationHeader}>
+                    <Text style={styles.conversationUser}>{session.user?.name || 'Unknown User'}</Text>
+                    {session.isAdminChat && (
+                      <View style={styles.adminChatBadge}>
+                        <Text style={styles.adminChatBadgeText}>ADMIN CHAT</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.conversationTitle}>{session.title}</Text>
+                  <Text style={styles.conversationTime}>
+                    {formatDate(session.updatedAt)} • {session.messageCount} messages
+                  </Text>
                 </View>
-                <Text style={styles.conversationTitle}>{session.title}</Text>
-                <Text style={styles.conversationTime}>
-                  {formatDate(session.updatedAt)} • {session.messageCount} messages
-                </Text>
+                <View style={styles.conversationActions}>
+                  <TouchableOpacity
+                    style={styles.conversationActionButton}
+                    onPress={() => handleViewChatSession(session)}
+                  >
+                    <Text style={styles.conversationActionText}>View</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.conversationActions}>
-                <TouchableOpacity 
-                  style={styles.conversationActionButton}
-                  onPress={() => handleViewChatSession(session)}
-                >
-                  <Text style={styles.conversationActionText}>View</Text>
-                </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Chat Session Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={chatModalVisible && selectedChatSession !== null}
+          onRequestClose={() => {
+            setChatModalVisible(false);
+            setSelectedChatSession(null);
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalContainer}
+          >
+            {selectedChatSession && (
+              <View style={styles.chatModalContent}>
+                <View style={styles.chatModalHeader}>
+                  <View style={styles.chatModalHeaderInfo}>
+                    <Text style={styles.chatModalTitle}>{selectedChatSession.title}</Text>
+                    <Text style={styles.chatModalSubtitle}>
+                      {selectedChatSession.user?.name} • {formatDate(selectedChatSession.createdAt)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setChatModalVisible(false);
+                      setSelectedChatSession(null);
+                    }}
+                    style={styles.modalCloseButton}
+                  >
+                    <X size={24} color={Colors.text} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.chatModalBody}>
+                  {selectedChatSession.messages.length === 0 ? (
+                    <View style={styles.noMessagesContainer}>
+                      <Text style={styles.noMessagesText}>No messages in this conversation</Text>
+                    </View>
+                  ) : (
+                    selectedChatSession.messages.map(message => (
+                      <View
+                        key={message.id}
+                        style={[
+                          styles.chatMessage,
+                          message.role === 'user' ? styles.userMessage : styles.assistantMessage
+                        ]}
+                      >
+                        <View style={styles.chatMessageHeader}>
+                          <Text style={styles.chatMessageRole}>
+                            {message.role === 'user' ? 'User' : 'Assistant'}
+                          </Text>
+                          <Text style={styles.chatMessageTime}>
+                            {formatDate(message.createdAt)}
+                          </Text>
+                        </View>
+                        <Text style={styles.chatMessageContent}>{message.content}</Text>
+                      </View>
+                    ))
+                  )}
+                </ScrollView>
+              </View>
+            )}
+          </KeyboardAvoidingView>
+        </Modal>
+      </View>
+    );
+  };
+  const [propertiesTab, setPropertiesTab] = useState('distressed');
+
+  const renderProperties = () => {
+    const filteredProperties = propertiesTab === 'distressed'
+      ? properties.filter(property => property.isDistressed)
+      : properties;
+
+    return (
+      <View style={styles.tabContent}>
+        <Text style={styles.sectionTitle}>Property Management</Text>
+
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={[styles.tab, propertiesTab === 'distressed' && styles.activeTab]}
+            onPress={() => setPropertiesTab('distressed')}
+          >
+            <Text style={[styles.tabText, propertiesTab === 'distressed' && styles.activeTabText]}>Distressed Deals</Text>
+            {/* The badge should show the number of distressed deals from the database */}
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeText}>{properties.filter(property => property.isDistressed).length}</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tab, propertiesTab === 'all' && styles.activeTab]}
+            onPress={() => setPropertiesTab('all')}
+          >
+            <Text style={[styles.tabText, propertiesTab === 'all' && styles.activeTabText]}>All Properties</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Search size={20} color={Colors.textLight} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search properties..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
+        <Text style={styles.subsectionTitle}>Properties</Text>
+
+        <View style={styles.distressedDealsList}>
+          {filteredProperties.map((property) => (
+            <View key={property.id} style={styles.distressedDealItem}>
+              <View style={styles.distressedDealHeader}>
+                {property.isDistressed && (
+                  <View style={styles.distressedBadge}>
+                    <AlertTriangle size={14} color="white" />
+                    <Text style={styles.distressedBadgeText}>DISTRESSED</Text>
+                  </View>
+                )}
+                <View style={styles.submittedDate}>
+                  <Clock size={14} color={Colors.textLight} />
+                  <Text style={styles.submittedDateText}>Created: {property.created_at}</Text>
+                </View>
+              </View>
+
+              <View style={styles.distressedDealContent}>
+                <Image source={{ uri: property.images[0] }} style={styles.distressedDealImage} />
+
+                <View style={styles.distressedDealInfo}>
+                  <Text style={styles.distressedDealTitle}>{property.title}</Text>
+                  <Text style={styles.distressedDealLocation}>{property.location}</Text>
+
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.discountedPrice}>
+                      {property.price.toLocaleString()} AED
+                    </Text>
+                  </View>
+
+                  <View style={styles.reasonContainer}>
+                    <Text style={styles.reasonLabel}>Type:</Text>
+                    <Text style={styles.reasonText}>{property.type}</Text>
+                  </View>
+
+                  <View style={styles.durationContainer}>
+                    <Calendar size={16} color={Colors.text} />
+                    <Text style={styles.durationText}>
+                      {property.bedrooms} bedrooms, {property.bathrooms} bathrooms
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
           ))}
         </View>
-      )}
-      
-      {/* Chat Session Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={chatModalVisible && selectedChatSession !== null}
-        onRequestClose={() => {
-          setChatModalVisible(false);
-          setSelectedChatSession(null);
-        }}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalContainer}
-        >
-          {selectedChatSession && (
-            <View style={styles.chatModalContent}>
-              <View style={styles.chatModalHeader}>
-                <View style={styles.chatModalHeaderInfo}>
-                  <Text style={styles.chatModalTitle}>{selectedChatSession.title}</Text>
-                  <Text style={styles.chatModalSubtitle}>
-                    {selectedChatSession.user?.name} • {formatDate(selectedChatSession.createdAt)}
-                  </Text>
-                </View>
-                <TouchableOpacity 
-                  onPress={() => {
-                    setChatModalVisible(false);
-                    setSelectedChatSession(null);
-                  }}
-                  style={styles.modalCloseButton}
-                >
-                  <X size={24} color={Colors.text} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.chatModalBody}>
-                {selectedChatSession.messages.length === 0 ? (
-                  <View style={styles.noMessagesContainer}>
-                    <Text style={styles.noMessagesText}>No messages in this conversation</Text>
-                  </View>
-                ) : (
-                  selectedChatSession.messages.map(message => (
-                    <View 
-                      key={message.id} 
-                      style={[
-                        styles.chatMessage,
-                        message.role === 'user' ? styles.userMessage : styles.assistantMessage
-                      ]}
-                    >
-                      <View style={styles.chatMessageHeader}>
-                        <Text style={styles.chatMessageRole}>
-                          {message.role === 'user' ? 'User' : 'Assistant'}
-                        </Text>
-                        <Text style={styles.chatMessageTime}>
-                          {formatDate(message.createdAt)}
-                        </Text>
-                      </View>
-                      <Text style={styles.chatMessageContent}>{message.content}</Text>
-                    </View>
-                  ))
-                )}
-              </ScrollView>
-            </View>
-          )}
-        </KeyboardAvoidingView>
-      </Modal>
-    </View>
-  );
-  
-  const renderProperties = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.sectionTitle}>Property Management</Text>
-      
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-          <Text style={[styles.tabText, styles.activeTabText]}>Distressed Deals</Text>
-          <View style={styles.tabBadge}>
-            <Text style={styles.tabBadgeText}>{pendingDistressedDeals.length}</Text>
-          </View>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>All Properties</Text>
-        </TouchableOpacity>
       </View>
-      
-      <View style={styles.searchContainer}>
-        <Search size={20} color={Colors.textLight} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search properties..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-      
-      <Text style={styles.subsectionTitle}>Pending Approval</Text>
-      
-      <View style={styles.distressedDealsList}>
-        {pendingDistressedDeals.map((deal) => (
-          <View key={deal.id} style={styles.distressedDealItem}>
-            <View style={styles.distressedDealHeader}>
-              <View style={styles.distressedBadge}>
-                <AlertTriangle size={14} color="white" />
-                <Text style={styles.distressedBadgeText}>DISTRESSED</Text>
-              </View>
-              <View style={styles.submittedDate}>
-                <Clock size={14} color={Colors.textLight} />
-                <Text style={styles.submittedDateText}>Submitted: {deal.submittedDate}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.distressedDealContent}>
-              <Image source={{ uri: deal.imageUrl }} style={styles.distressedDealImage} />
-              
-              <View style={styles.distressedDealInfo}>
-                <Text style={styles.distressedDealTitle}>{deal.title}</Text>
-                <Text style={styles.distressedDealLocation}>{deal.location}</Text>
-                
-                <View style={styles.priceContainer}>
-                  <Text style={styles.originalPrice}>
-                    {deal.originalPrice.toLocaleString()} {deal.currency}
-                  </Text>
-                  <Text style={styles.discountedPrice}>
-                    {deal.price.toLocaleString()} {deal.currency}
-                  </Text>
-                  <Text style={styles.discountBadge}>
-                    {Math.round((1 - deal.price / deal.originalPrice) * 100)}% OFF
-                  </Text>
-                </View>
-                
-                <View style={styles.reasonContainer}>
-                  <Text style={styles.reasonLabel}>Reason:</Text>
-                  <Text style={styles.reasonText}>{deal.distressReason}</Text>
-                </View>
-                
-                <View style={styles.durationContainer}>
-                  <Calendar size={16} color={Colors.text} />
-                  <Text style={styles.durationText}>
-                    {deal.distressedDealDuration} days ({deal.totalFee} AED total)
-                  </Text>
-                </View>
-                
-                <Text style={styles.ownerText}>Owner: {deal.owner}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.distressedDealActions}>
-              <TouchableOpacity 
-                style={styles.rejectButton}
-                onPress={() => handleRejectDistressedDeal(deal.id)}
-              >
-                <X size={18} color={Colors.error} />
-                <Text style={styles.rejectButtonText}>Reject</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.approveButton}
-                onPress={() => handleApproveDistressedDeal(deal.id)}
-              >
-                <Check size={18} color="white" />
-                <Text style={styles.approveButtonText}>Approve</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-  
+    );
+  };
   const renderSettings = () => (
     <View style={styles.tabContent}>
       <Text style={styles.sectionTitle}>System Settings</Text>
