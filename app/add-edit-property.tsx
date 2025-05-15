@@ -1112,20 +1112,6 @@ export default function AddEditPropertyScreen() {
         )}
       </View>
 
-      {/* Owner Name */}
-      <View style={styles.formGroup}>
-        <View style={styles.labelContainer}>
-          <User size={16} color={Colors.primary} style={styles.labelIcon} />
-          <Text style={styles.label}>Owner Name</Text>
-        </View>
-        <TextInput
-          style={styles.input}
-          value={ownerName}
-          onChangeText={setOwnerName}
-          placeholder="Enter owner name"
-          placeholderTextColor={Colors.textLight}
-        />
-      </View>
 
       {/* Negotiable */}
       <View style={styles.formGroup}>

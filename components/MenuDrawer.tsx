@@ -64,7 +64,7 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
   const { unreadCount } = useNotifications();
   const slideAnim = React.useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
-  
+
   React.useEffect(() => {
     if (isVisible) {
       Animated.parallel([
@@ -94,14 +94,14 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
       ]).start();
     }
   }, [isVisible]);
-  
+
   const handleNavigation = (route: string) => {
     onClose();
     setTimeout(() => {
       router.push(route);
     }, 300);
   };
-  
+
   const handleLogout = async () => {
     onClose();
     setTimeout(async () => {
@@ -112,16 +112,16 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
       }
     }, 300);
   };
-  
+
   const handleLogin = () => {
     onClose();
     setTimeout(() => {
       router.push('/auth/login');
     }, 300);
   };
-  
+
   if (!isVisible) return null;
-  
+
   return (
     <Modal
       visible={isVisible}
@@ -130,20 +130,20 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.backdrop,
             { opacity: opacityAnim }
           ]}
         >
-          <TouchableOpacity 
-            style={styles.backdropTouchable} 
-            onPress={onClose} 
+          <TouchableOpacity
+            style={styles.backdropTouchable}
+            onPress={onClose}
             activeOpacity={1}
           />
         </Animated.View>
-        
-        <Animated.View 
+
+        <Animated.View
           style={[
             styles.drawerContainer,
             { transform: [{ translateX: slideAnim }] }
@@ -166,7 +166,7 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
               ) : (
                 <View style={styles.loginPrompt}>
                   <Text style={styles.loginPromptText}>Sign in to access all features</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.loginButton}
                     onPress={handleLogin}
                   >
@@ -179,20 +179,26 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
               <X size={24} color={Colors.text} />
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView style={styles.menuItems}>
             {/* Navigation section */}
             <SectionHeader title="Navigation" />
-            <MenuItem 
+            <MenuItem
               icon={<Home size={22} color={Colors.text} />}
               label="Home"
               onPress={() => handleNavigation('/(tabs)')}
             />
-            
-            <MenuItem 
+
+            <MenuItem
               icon={<Search size={22} color={Colors.text} />}
               label="Discover Properties"
               onPress={() => handleNavigation('/(tabs)/discover')}
+            />
+
+             <MenuItem
+              icon={<AlertTriangle size={22} color={Colors.text} />}
+              label="Distressed Deals"
+              onPress={() => handleNavigation('/distressed-deals')}
             />
 
             <MenuItem
@@ -200,93 +206,79 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
               label="Properties Hub"
               onPress={() => handleNavigation('/(tabs)/properties-market-hub')}
             />
-            
-            {isAuthenticated && (
-              <MenuItem 
-                icon={<Heart size={22} color={Colors.text} />}
-                label="Saved Properties"
-                onPress={() => handleNavigation('/(tabs)/saved')}
-              />
-            )}
-            
-            {/* Communication section - only for authenticated users */}
-            {isAuthenticated && (
-              <>
-                <SectionHeader title="Communication" />
-                <MenuItem 
-                  icon={<Bell size={22} color={Colors.text} />}
-                  label="Notifications"
-                  badge={unreadCount > 0 ? unreadCount : undefined}
-                  onPress={() => handleNavigation('/notifications')}
-                />
-                
-                <MenuItem 
-                  icon={<MessageSquare size={22} color={Colors.text} />}
-                  label="Chat"
-                  onPress={() => handleNavigation('/(tabs)/chat')}
-                />
-                
-                <MenuItem 
-                  icon={<Clock size={22} color={Colors.text} />}
-                  label="Chat History"
-                  onPress={() => handleNavigation('/history')}
-                />
 
-                 <MenuItem
-                  icon={<Store size={22} color={Colors.text} />}
-                  label="Admin Chat"
-                  onPress={() => handleNavigation('/admin/chat')}
-                />
-              </>
-            )}
             
             {/* Property Management - only for authenticated users */}
-            {isAuthenticated && (
+             {isAuthenticated && (
               <>
-                <SectionHeader title="Property Management"/>
-                <MenuItem 
-                  icon={<AlertTriangle size={22} color={Colors.text} />}
-                  label="Distressed Deals"
-                  onPress={() => handleNavigation('/distressed-deals')}
-                />
-                
-                <MenuItem 
+                <SectionHeader title="Property Management" />
+                 <MenuItem
                   icon={<Plus size={22} color={Colors.text} />}
-                  label="Add Property"
+                  label="List Property & Earn"
                   onPress={() => handleNavigation('/add-edit-property')}
                 />
-                
-                <MenuItem 
+
+                <MenuItem
                   icon={<User size={22} color={Colors.text} />}
                   label="My Properties"
                   onPress={() => handleNavigation('/my-properties')}
                 />
 
-                <MenuItem 
+                 <MenuItem
                   icon={<ShoppingBag size={22} color={Colors.text} />}
                   label="Marketplace"
                   onPress={() => handleNavigation('/(tabs)/marketplace')}
                 />
+                 <MenuItem
+                  icon={<Heart size={22} color={Colors.text} />}
+                  label="Saved Properties"
+                  onPress={() => handleNavigation('/(tabs)/saved')}
+                />
               </>
             )}
-            
+
+            {/* Communication section - only for authenticated users */}
+            {isAuthenticated && (
+              <>
+                <SectionHeader title="Communication" />
+                 <MenuItem
+                  icon={<MessageSquare size={22} color={Colors.text} />}
+                  label="24/7 Chat Assistance"
+                  onPress={() => handleNavigation('/(tabs)/chat')}
+                />
+
+                <MenuItem
+                  icon={<Bell size={22} color={Colors.text} />}
+                  label="Notifications"
+                  badge={unreadCount > 0 ? unreadCount : undefined}
+                  onPress={() => handleNavigation('/notifications')}
+                />
+
+                <MenuItem
+                  icon={<Clock size={22} color={Colors.text} />}
+                  label="Chat History"
+                  onPress={() => handleNavigation('/history')}
+                />
+              </>
+            )}
+
             {/* Wallet - only for authenticated users */}
             {isAuthenticated && (
               <>
                 <SectionHeader title="Finances" />
-                <MenuItem 
+                <MenuItem
                   icon={<Wallet size={22} color={Colors.text} />}
                   label="Wallet"
                   onPress={() => handleNavigation('/(tabs)/wallet')}
                 />
               </>
             )}
-            
+
             {/* Account section */}
             <SectionHeader title="Account" />
             {isAuthenticated ? (
               <>
-                <MenuItem 
+                <MenuItem
                   icon={<User size={22} color={Colors.text} />}
                   label="Profile"
                   onPress={() => handleNavigation('/profile')}
@@ -297,43 +289,43 @@ const MenuDrawer: React.FC<MenuDrawerProps> = ({ isVisible, onClose }) => {
                   label="My Public Profile"
                   onPress={() => handleNavigation(user ? `/public-profile?userId=${user.id}` : '/auth/login')}
                 />
-                
-                <MenuItem 
+
+                <MenuItem
                   icon={<Sparkles size={22} color={Colors.text} />}
                   label="Subscription"
                   onPress={() => handleNavigation('/subscription')}
                 />
-                
-                <MenuItem 
+
+                <MenuItem
                   icon={<Settings size={22} color={Colors.text} />}
                   label="Settings"
                   onPress={() => handleNavigation('/settings')}
                 />
               </>
             ) : (
-              <MenuItem 
+              <MenuItem
                 icon={<User size={22} color={Colors.text} />}
                 label="Create Account"
                 onPress={() => handleNavigation('/auth/register')}
               />
             )}
-            
+
             {/* Information section */}
             <SectionHeader title="Information" />
-            <MenuItem 
+            <MenuItem
               icon={<HelpCircle size={22} color={Colors.text} />}
               label="How We Work"
               onPress={() => handleNavigation('/how-we-work')}
             />
-            
-            <MenuItem 
+
+            <MenuItem
               icon={<Info size={22} color={Colors.text} />}
               label="About"
               onPress={() => handleNavigation('/version')}
             />
-            
+
             {isAuthenticated && (
-              <MenuItem 
+              <MenuItem
                 icon={<LogOut size={22} color={Colors.error} />}
                 label="Logout"
                 labelStyle={{ color: Colors.error }}
@@ -357,13 +349,13 @@ interface MenuItemProps {
 
 const MenuItem: React.FC<MenuItemProps> = ({ icon, label, onPress, labelStyle, badge }) => {
   const [isPressed, setIsPressed] = React.useState(false);
-  
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
         styles.menuItem,
         isPressed && styles.menuItemPressed
-      ]} 
+      ]}
       onPress={onPress}
       onPressIn={() => setIsPressed(true)}
       onPressOut={() => setIsPressed(false)}

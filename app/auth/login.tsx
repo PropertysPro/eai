@@ -211,16 +211,6 @@ export default function LoginScreen() {
           </View>
           
           <View style={styles.socialButtonsContainer}>
-            <SocialLoginButton 
-              provider="google"
-              onPress={handleGoogleLogin}
-              isLoading={isLoading}
-            />
-            <SocialLoginButton 
-              provider="facebook"
-              onPress={handleFacebookLogin}
-              isLoading={isLoading}
-            />
             {Platform.OS === 'ios' && (
               <SocialLoginButton 
                 provider="apple"

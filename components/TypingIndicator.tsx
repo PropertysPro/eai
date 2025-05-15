@@ -14,7 +14,6 @@ const TypingIndicator = () => {
         Animated.timing(dot1Opacity, {
           toValue: 1,
           duration: 400,
-          useNativeDriver: true,
         }),
         Animated.timing(dot1Opacity, {
           toValue: 0.3,

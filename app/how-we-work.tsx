@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,20 +15,61 @@ import AnimatedBubble from '@/components/AnimatedBubble';
 
 const { width } = Dimensions.get('window');
 
+// HowWeWorkStep Component
+const HowWeWorkStep = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
+  <View style={styles.featureCard}>
+    <View style={styles.featureIconContainer}>
+      <Icon size={28} color={Colors.primary} />
+    </View>
+    <View style={styles.featureContent}>
+      <Text style={styles.featureTitle}>{title}</Text>
+      <Text style={styles.featureDescription}>{description}</Text>
+    </View>
+  </View>
+);
+
 export default function HowWeWorkScreen() {
   const router = useRouter();
   const [bubbleActive, setBubbleActive] = useState(true);
-  
+
   // Activate bubble animation on load
   useEffect(() => {
     setBubbleActive(true);
     const timer = setTimeout(() => setBubbleActive(false), 2000);
     return () => clearTimeout(timer);
   }, []);
-  
+
+  const steps = [
+    {
+      icon: Brain,
+      title: 'AI-Powered Matching',
+      description: 'Our advanced AI analyzes thousands of properties and matches them to your preferences, saving you time and helping you find exactly what you\'re looking for.',
+    },
+    {
+      icon: MessageSquare,
+      title: 'Natural Conversations',
+      description: 'Simply chat with CemProp as you would with a real estate agent. Ask questions, describe what you\'re looking for, and get personalized recommendations.',
+    },
+    {
+      icon: Home,
+      title: 'Property Management',
+      description: 'List your properties, track inquiries, and manage viewings all in one place. CemProp helps you stay organized whether you\'re buying, selling, or renting.',
+    },
+    {
+      icon: Search,
+      title: 'Smart Search',
+      description: 'Our intelligent search understands context and learns from your preferences over time, making each search more accurate than the last.',
+    },
+    {
+      icon: Shield,
+      title: 'Privacy & Security',
+      description: 'Your data is secure with us. We use industry-standard encryption and never share your personal information without your consent.',
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.container} edges={['right', 'left', 'bottom']}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'How We Work',
           headerTitleStyle: { color: Colors.text },
@@ -41,7 +81,7 @@ export default function HowWeWorkScreen() {
           ),
         }}
       />
-      
+
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.heroSection}>
           <View style={styles.heroBackground} />
@@ -53,94 +93,33 @@ export default function HowWeWorkScreen() {
             <Text style={styles.heroSubtitle}>Your AI-powered real estate assistant</Text>
           </View>
         </View>
-        
+
         <Text style={styles.title}>How CemProp Works</Text>
         <Text style={styles.subtitle}>
           CemProp uses advanced artificial intelligence to help you find your perfect property
         </Text>
-        
+
         <View style={styles.featuresContainer}>
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <Brain size={28} color={Colors.primary} />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>AI-Powered Matching</Text>
-              <Text style={styles.featureDescription}>
-                Our advanced AI analyzes thousands of properties and matches them to your preferences, 
-                saving you time and helping you find exactly what you're looking for.
-              </Text>
-            </View>
-          </View>
-        
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <MessageSquare size={28} color={Colors.primary} />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Natural Conversations</Text>
-              <Text style={styles.featureDescription}>
-                Simply chat with CemProp as you would with a real estate agent. Ask questions, 
-                describe what you're looking for, and get personalized recommendations.
-              </Text>
-            </View>
-          </View>
-        
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <Home size={28} color={Colors.primary} />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Property Management</Text>
-              <Text style={styles.featureDescription}>
-                List your properties, track inquiries, and manage viewings all in one place. 
-                CemProp helps you stay organized whether you're buying, selling, or renting.
-              </Text>
-            </View>
-          </View>
-        
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <Search size={28} color={Colors.primary} />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Smart Search</Text>
-              <Text style={styles.featureDescription}>
-                Our intelligent search understands context and learns from your preferences over time, 
-                making each search more accurate than the last.
-              </Text>
-            </View>
-          </View>
-        
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <Shield size={28} color={Colors.primary} />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Privacy & Security</Text>
-              <Text style={styles.featureDescription}>
-                Your data is secure with us. We use industry-standard encryption and never share your 
-                personal information without your consent.
-              </Text>
-            </View>
-          </View>
+          {steps.map((step, index) => (
+            <HowWeWorkStep key={index} {...step} />
+          ))}
         </View>
-        
+
         <View style={styles.infoContainer}>
           <Text style={styles.infoTitle}>Our Technology</Text>
           <Text style={styles.infoText}>
-            CemProp is built on state-of-the-art natural language processing and machine learning 
-            technologies. Our AI is continuously trained on real estate data to provide the most 
+            CemProp is built on state-of-the-art natural language processing and machine learning
+            technologies. Our AI is continuously trained on real estate data to provide the most
             accurate and helpful assistance possible.
             {"\n\n"}
-            We combine the power of artificial intelligence with human expertise to create a 
+            We combine the power of artificial intelligence with human expertise to create a
             seamless real estate experience that saves you time and helps you make better decisions.
           </Text>
         </View>
-        
+
         <View style={styles.ctaContainer}>
           <Text style={styles.ctaTitle}>Ready to find your perfect property?</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.ctaButton}
             onPress={() => router.push('/(tabs)/discover')}
           >

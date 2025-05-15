@@ -71,6 +71,8 @@ export interface Property {
   }[];
 }
 
+export type PropertyConstructionStatus = 'ready' | 'off_plan';
+
 export interface PropertyFilters {
   type?: PropertyType;
   propertyType?: PropertyType;

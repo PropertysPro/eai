@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert
+  Alert,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
@@ -44,7 +45,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     name: 'Pro',
     price: '9.99',
     currency: 'USD',
-    description: 'Enhanced features for serious buyers',
+    description: 'Enhanced features for serious buyers. <a href="https://buy.stripe.com/test_4gM28re8PfNQadna4N33W00">Subscribe Now</a>',
     features: [
       'Unlimited messages',
       'Advanced property search',
@@ -96,6 +97,12 @@ export default function SubscriptionScreen() {
       return;
     }
     
+    if (selectedPlan === 'pro') {
+      // Redirect to Stripe link for Pro plan
+      Linking.openURL('https://buy.stripe.com/test_4gM28re8PfNQadna4N33W00');
+      return;
+    }
+
     // For paid plans, go to checkout
     router.push({
       pathname: '/checkout',
@@ -425,7 +432,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   featuresSection: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     padding: 20,
     marginBottom: 24,

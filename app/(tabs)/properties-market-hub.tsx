@@ -7,20 +7,27 @@ import { colors as Colors } from '@/constants/colors';
 import { useRouter } from 'expo-router';
 import { countries } from '@/constants/locations';
 import { Picker } from '@react-native-picker/picker';
+import { getRealtorProfiles } from '@/services/supabase-service';
+import { PropertyConstructionStatus } from '@/types/property';
 
 interface RealtorProfile {
   id: string;
-  name: string;
-  agency: string;
-  profileImage: string;
-  specialization: string[];
-  experienceYears: number;
+  user_id: string;
+  is_subscribed: boolean;
+  profiles: {
+    id: string;
+    name: string;
+    agency: string;
+    avatar_url: string;
+    specialization: string[];
+    experience_years: number;
+  }[];
 }
 
-const realtors: RealtorProfile[] = [
-  { id: 'a1b2c3d4-e5f6-7890-1234-567890abcdef', name: 'Fatima Al-Mansoori', agency: 'Dubai Realty Kings', profileImage: 'https://i.pravatar.cc/150?img=1', specialization: ['Luxury Villas', 'Waterfront Properties'], experienceYears: 7 },
-  { id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0', name: 'Ahmed Khan', agency: 'Desert Homes Co.', profileImage: 'https://i.pravatar.cc/150?img=2', specialization: ['Apartments', 'Off-Plan'], experienceYears: 5 },
-  { id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01', name: 'Layla Ibrahim', agency: 'Cityscape Brokers', profileImage: 'https://i.pravatar.cc/150?img=3', specialization: ['Commercial', 'Retail Spaces'], experienceYears: 10 },
+const realtorIds = [
+  'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+  'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
+  'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
 ];
 
 const commonPropertyFields = {
@@ -56,9 +63,9 @@ const propertiesForRent = [
 ];
 
 const offPlanProperties = [
-  { ...commonPropertyFields, id: 'op1', title: 'Off-Plan: Tower X - 2BR Unit', price: 1800000, type: 'apartment' as PropertyType, status: 'available' as 'available', bedrooms: 2, bathrooms: 2, area: 1100, location: 'Emaar Beachfront', construction_status: 'off_plan' , market_status: 'new_to_market' as 'new_to_market', listingType: 'sale' as 'sale' },
-  { ...commonPropertyFields, id: 'op2', title: 'Off-Plan: Waterfront Villas Phase II', price: 5500000, type: 'villa' as PropertyType, status: 'available' as 'available', bedrooms: 5, bathrooms: 6, area: 4500, location: 'Dubai Creek Harbour', construction_status: 'off_plan' , market_status: 'new_to_market' as 'new_to_market', listingType: 'sale' as 'sale' },
-  { ...commonPropertyFields, id: 'op3', title: 'Off-Plan: Luxury Apt, Dubai Hills', price: 2500000, type: 'apartment' as PropertyType, status: 'available' as 'available', bedrooms: 3, bathrooms: 3, area: 1800, location: 'Dubai Hills Estate', construction_status: 'off_plan' , market_status: 'new_to_market' as 'new_to_market', listingType: 'sale' as 'sale' },
+  { ...commonPropertyFields, id: 'op1', title: 'Off-Plan: Tower X - 2BR Unit', price: 1800000, type: 'apartment' as PropertyType, status: 'available' as 'available', bedrooms: 2, bathrooms: 2, area: 1100, location: 'Emaar Beachfront', construction_status: "off_plan" as PropertyConstructionStatus, market_status: 'new_to_market' as 'new_to_market', listingType: 'sale' as 'sale' },
+  { ...commonPropertyFields, id: 'op2', title: 'Off-Plan: Waterfront Villas Phase II', price: 5500000, type: 'villa' as PropertyType, status: 'available' as 'available', bedrooms: 5, bathrooms: 6, area: 4500, location: 'Dubai Creek Harbour', construction_status: "off_plan" as PropertyConstructionStatus, market_status: 'new_to_market' as 'new_to_market', listingType: 'sale' as 'sale' },
+  { ...commonPropertyFields, id: 'op3', title: 'Off-Plan: Luxury Apt, Dubai Hills', price: 2500000, type: 'apartment' as PropertyType, status: 'available' as 'available', bedrooms: 3, bathrooms: 3, area: 1800, location: 'Dubai Hills Estate', construction_status: "off_plan" as PropertyConstructionStatus, market_status: 'new_to_market' as 'new_to_market', listingType: 'sale' as 'sale' },
 ];
 
 const PropertiesHubScreen = () => {
@@ -67,15 +74,32 @@ const PropertiesHubScreen = () => {
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [budget, setBudget] = useState<string>('');
   const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [realtors, setRealtors] = useState<RealtorProfile[]>([]);
 
   useEffect(() => {
-    if (selectedCountry) {
-      const country = countries.find((c) => c.name === selectedCountry);
-      setCityOptions(country ? country.cities : []);
-    } else {
-      setCityOptions([]);
-    }
-  }, [selectedCountry]);
+    const fetchRealtors = async () => {
+      try {
+        const realtorProfilesData = await getRealtorProfiles();
+        const realtorProfiles = realtorProfilesData.map((realtor) => ({
+          id: realtor.user_id,
+          user_id: realtor.user_id,
+          is_subscribed: realtor.is_subscribed,
+          profile: {
+            name: realtor.profile?.name || '',
+            agency: realtor.profile?.agency || '',
+            avatar_url: realtor.profile?.avatar_url || '',
+            specialization: realtor.profile?.specialization || [],
+            experienceYears: realtor.profile?.experienceYears || 0,
+          },
+        }));
+        setRealtors(realtorProfiles as RealtorProfile[]);
+      } catch (error) {
+        console.error('Error fetching realtor profiles:', error);
+      }
+    };
+
+    fetchRealtors();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -126,23 +150,31 @@ const PropertiesHubScreen = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScrollContainer}
           >
-            {realtors.map((realtor) => {
-              return (
-                <TouchableOpacity
-                  key={realtor.id}
-                  style={styles.realtorCard}
-                  onPress={() => router.push(`/public-profile?userId=${realtor.id}`)}
-                >
-                  <Image source={{ uri: realtor.profileImage }} style={styles.realtorImage} />
-                  <View style={styles.realtorInfo}>
-                    <Text style={styles.realtorName} numberOfLines={1}>{realtor.name}</Text>
-                    <Text style={styles.realtorAgency} numberOfLines={1}>{realtor.agency}</Text>
-                    <Text style={styles.realtorDetail}>Exp: {realtor.experienceYears} yrs</Text>
-                    <Text style={styles.realtorDetail}>Specializes in: {realtor.specialization.join(', ')}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            {realtors && realtors.length > 0 ? (
+              realtors.map((realtor) => {
+                if (!realtor?.profile) {
+                  return null;
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={realtor.id}
+                    style={styles.realtorCard}
+                    onPress={() => router.push(`/public-profile?userId=${realtor.id}`)}
+                  >
+                    <Image source={{ uri: realtor.profiles[0].avatar_url || '' }} style={styles.realtorImage} />
+                    <View style={styles.realtorInfo}>
+                      <Text style={styles.realtorName} numberOfLines={1}>{realtor.profiles[0]?.name || ''}</Text>
+                      <Text style={styles.realtorAgency} numberOfLines={1}>{realtor.profiles[0]?.agency || ''}</Text>
+                      <Text style={styles.realtorDetail}>Exp: {realtor.profiles[0]?.experience_years} yrs</Text>
+                      <Text style={styles.realtorDetail}>Specializes in: {realtor.profiles[0]?.specialization?.join(', ') || ''}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }).filter(Boolean)
+            ) : (
+              <Text>No realtors found.</Text>
+            )}
           </ScrollView>
         </View>
 
