@@ -8,6 +8,7 @@ import { Property } from '@/types/property';
 import { colors as Colors } from '@/constants/colors';
 import { formatPrice } from '@/utils/helpers';
 import { useAuth } from '@/context/auth-context';
+import { useCurrencyStore } from '@/store/currency-store';
 
 const PropertyDetails = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -244,7 +245,7 @@ const PropertyDetails = () => {
         {/* Property Details */}
         <View style={styles.detailsContainer}>
           <Text style={styles.price}>
-            {formatPrice(property.price, property.currency)}
+            {formatPrice(property.price, property.currency || useCurrencyStore.getState().currentCurrency).replace(/[^0-9.,]+/g, '')}
           </Text>
           
           <Text style={styles.title}>{property.title}</Text>

@@ -110,9 +110,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.price}>
-              {showMarketplacePrice && property.marketplacePrice 
+              {(showMarketplacePrice && property.marketplacePrice 
                 ? formatPrice(property.marketplacePrice, property.currency || currencyPreference || globalCurrency)
-                : formatPrice(property.price, property.currency || currencyPreference || globalCurrency)}
+                : formatPrice(property.price, property.currency || currencyPreference || globalCurrency)).replace(/[^0-9.,]+/g, '')}
               {property.status === 'rented' && '/month'}
             </Text>
             {(showMarketplacePrice || showMarketplaceStatus) && property.isInMarketplace && (

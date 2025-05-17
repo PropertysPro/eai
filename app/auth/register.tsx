@@ -60,6 +60,27 @@ export default function RegisterScreen() {
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [showCountryCodeModal, setShowCountryCodeModal] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false); // For country selection
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false); // For currency selection
+  const [showLanguageModal, setShowLanguageModal] = useState(false); // For language selection
+  const [currency, setCurrency] = useState('USD'); // Default currency
+  const [language, setLanguage] = useState('en'); // Default language
+
+  // Lists for currency and language selection
+  const currencies = [
+    { code: 'USD', name: 'US Dollar' },
+    { code: 'EUR', name: 'Euro' },
+    { code: 'GBP', name: 'British Pound' },
+    { code: 'AED', name: 'UAE Dirham' },
+    { code: 'INR', name: 'Indian Rupee' },
+  ];
+
+  const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'ar', name: 'Arabic' },
+    { code: 'fr', name: 'French' },
+    { code: 'de', name: 'German' },
+    { code: 'es', name: 'Spanish' },
+  ];
 
   // List of countries for the dropdown
   const countries = [
@@ -90,7 +111,7 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     try {
       // Validate form
-      if (!email || !password || !confirmPassword || !firstName || !lastName) {
+      if (!email || !password || !confirmPassword || !firstName || !lastName || !currency || !language) {
         setError('Please fill in all required fields.');
         return;
       }
@@ -121,9 +142,9 @@ export default function RegisterScreen() {
       const phone = phoneNumber ? `${phoneCode}${phoneNumber}` : '';
 
       // Call Supabase registration
-      // Pass phone, roles, and country as additional data to the auth service
+      // Pass phone, roles, country as additional data to the auth service
       console.log('[RegisterScreen] Calling authService.register with selectedRole:', selectedRole);
-      const registrationResult = await authService.register(email, password, fullName, phone, selectedRole ? [selectedRole] : [], country);
+      const registrationResult = await authService.register(email, password, fullName, phone, selectedRole ? [selectedRole] : [], country, currency, language);
 
       if (registrationResult.profileData) {
         // Explicitly set the user in AuthContext
@@ -245,6 +266,26 @@ export default function RegisterScreen() {
                 </Text>
                 <ChevronDown size={16} color="#666" />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.inputButton}
+                onPress={() => setShowCurrencyModal(true)}
+              >
+                <Text style={styles.inputButtonText}>
+                  {currency || 'Select Currency'}
+                </Text>
+                <ChevronDown size={16} color="#666" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.inputButton}
+                onPress={() => setShowLanguageModal(true)}
+              >
+                <Text style={styles.inputButtonText}>
+                  {language || 'Select Language'}
+                </Text>
+                <ChevronDown size={16} color="#666" />
+              </TouchableOpacity>
               
               {/* User Role Selection */}
               <View style={styles.sectionTitle}>
@@ -328,6 +369,84 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Currency Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Currency</Text>
+            <FlatList
+              data={currencies}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.countryCodeItem}
+                  onPress={() => {
+                    setCurrency(item.code);
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <Text style={styles.countryCodeText}>{item.name} ({item.code})</Text>
+                  {currency === item.code && (
+                    <Check size={20} color={PRIMARY_COLOR} />
+                  )}
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item.code}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowCurrencyModal(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language Modal */}
+      <Modal
+        visible={showLanguageModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Language</Text>
+            <FlatList
+              data={languages}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.countryCodeItem}
+                  onPress={() => {
+                    setLanguage(item.code);
+                    setShowLanguageModal(false);
+                  }}
+                >
+                  <Text style={styles.countryCodeText}>{item.name} ({item.code})</Text>
+                  {language === item.code && (
+                    <Check size={20} color={PRIMARY_COLOR} />
+                  )}
+                </TouchableOpacity>
+              )}
+              keyExtractor={(item) => item.code}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowLanguageModal(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Country Code Modal */}
       <Modal

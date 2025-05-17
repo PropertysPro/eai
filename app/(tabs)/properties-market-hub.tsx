@@ -1,41 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, Dimensions, TouchableOpacity, TextInput, SafeAreaView } from 'react-native';
+import { useRouter } from 'expo-router';
 import { PropertyCard } from '@/components/PropertyCard';
 import { Property, PropertyType } from '@/types/property';
 import { colors as Colors } from '@/constants/colors';
-import { useRouter } from 'expo-router';
 import { countries } from '@/constants/locations';
-import { Picker } from '@react-native-picker/picker';
-import { getRealtorProfiles } from '@/services/supabase-service';
+import RealtorList from '@/components/RealtorList';
 import { PropertyConstructionStatus } from '@/types/property';
-
-interface RealtorProfile {
-  id: string;
-  user_id: string;
-  is_subscribed: boolean;
-  profiles: {
-    id: string;
-    name: string;
-    agency: string;
-    avatar_url: string;
-    specialization: string[];
-    experience_years: number;
-  }[];
-}
-
-const realtorIds = [
-  'a1b2c3d4-e5f6-7890-1234-567890abcdef',
-  'b2c3d4e5-f6a7-8901-2345-67890abcdef0',
-  'c3d4e5f6-a7b8-9012-3456-7890abcdef01',
-];
+import { Picker } from '@react-native-picker/picker';
 
 const commonPropertyFields = {
   description: 'A beautiful property with stunning views and modern amenities.',
   location: 'Dubai, UAE',
   address: 'Specific Address, Dubai, UAE',
   area_unit: 'sqft' as 'sqft',
-  images: ['https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80'],
+  images: ['https://images.unsplash.com/photo-1580587771525-78b9dba3b914?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80'],
   features: ['Swimming Pool', 'Gym', 'Parking', 'Security'],
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -74,32 +53,7 @@ const PropertiesHubScreen = () => {
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [budget, setBudget] = useState<string>('');
   const [cityOptions, setCityOptions] = useState<string[]>([]);
-  const [realtors, setRealtors] = useState<RealtorProfile[]>([]);
-
-  useEffect(() => {
-    const fetchRealtors = async () => {
-      try {
-        const realtorProfilesData = await getRealtorProfiles();
-        const realtorProfiles = realtorProfilesData.map((realtor) => ({
-          id: realtor.user_id,
-          user_id: realtor.user_id,
-          is_subscribed: realtor.is_subscribed,
-          profile: {
-            name: realtor.profile?.name || '',
-            agency: realtor.profile?.agency || '',
-            avatar_url: realtor.profile?.avatar_url || '',
-            specialization: realtor.profile?.specialization || [],
-            experienceYears: realtor.profile?.experienceYears || 0,
-          },
-        }));
-        setRealtors(realtorProfiles as RealtorProfile[]);
-      } catch (error) {
-        console.error('Error fetching realtor profiles:', error);
-      }
-    };
-
-    fetchRealtors();
-  }, []);
+  const [sortBy, setSortBy] = useState<string>('');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -110,6 +64,8 @@ const PropertiesHubScreen = () => {
           onValueChange={(itemValue: string) => {
             setSelectedCountry(itemValue);
             setSelectedCity('');
+            const selectedCountryData = countries.find((country) => country.name === itemValue);
+            setCityOptions(selectedCountryData ? selectedCountryData.cities : []);
           }}
         >
           <Picker.Item label="Select Country" value="" />
@@ -121,7 +77,7 @@ const PropertiesHubScreen = () => {
         <Picker
           selectedValue={selectedCity}
           style={styles.picker}
-          enabled={cityOptions.length > 0}
+          enabled={selectedCountry !== ''}
           onValueChange={(itemValue: string) => setSelectedCity(itemValue)}
         >
           <Picker.Item label="Select City" value="" />
@@ -137,46 +93,22 @@ const PropertiesHubScreen = () => {
           onChangeText={setBudget}
           keyboardType="numeric"
         />
+
+        <Picker
+          selectedValue={sortBy}
+          style={styles.picker}
+          onValueChange={(itemValue: string) => setSortBy(itemValue)}
+        >
+          <Picker.Item label="Sort By" value="" />
+          <Picker.Item label="Experience (Highest to Lowest)" value="experience_years" />
+          <Picker.Item label="Name (A to Z)" value="name" />
+        </Picker>
       </View>
 
       <ScrollView style={styles.container}>
         <Text style={styles.header}>Explore Top Realtors & Properties</Text>
 
-        {/* Realtors Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top Realtors</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContainer}
-          >
-            {realtors && realtors.length > 0 ? (
-              realtors.map((realtor) => {
-                if (!realtor?.profile) {
-                  return null;
-                }
-
-                return (
-                  <TouchableOpacity
-                    key={realtor.id}
-                    style={styles.realtorCard}
-                    onPress={() => router.push(`/public-profile?userId=${realtor.id}`)}
-                  >
-                    <Image source={{ uri: realtor.profiles[0].avatar_url || '' }} style={styles.realtorImage} />
-                    <View style={styles.realtorInfo}>
-                      <Text style={styles.realtorName} numberOfLines={1}>{realtor.profiles[0]?.name || ''}</Text>
-                      <Text style={styles.realtorAgency} numberOfLines={1}>{realtor.profiles[0]?.agency || ''}</Text>
-                      <Text style={styles.realtorDetail}>Exp: {realtor.profiles[0]?.experience_years} yrs</Text>
-                      <Text style={styles.realtorDetail}>Specializes in: {realtor.profiles[0]?.specialization?.join(', ') || ''}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              }).filter(Boolean)
-            ) : (
-              <Text>No realtors found.</Text>
-            )}
-          </ScrollView>
-        </View>
+        <RealtorList sortBy={sortBy} />
 
         {/* Distressed Deals Section */}
         <View style={styles.section}>

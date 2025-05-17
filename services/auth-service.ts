@@ -7,9 +7,9 @@ import { crossStorage } from './crossPlatformStorage';
 export const updateProfile = async (updates: any): Promise<User> => {
   try {
     console.log('[Auth Service] Updating user profile with updates:', JSON.stringify(updates, null, 2));
-    
+
     let { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
-    
+
     if (sessionError || !sessionResult?.session) {
       console.log('[Auth Service] No active session, attempting to refresh...');
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
@@ -226,9 +226,9 @@ export const updateProfile = async (updates: any): Promise<User> => {
 };
 
 // Register a new user
-export const register = async (email: string, password: string, name?: string, phone?: string, roles?: string[], country?: string) => {
+export const register = async (email: string, password: string, name?: string, phone?: string, roles?: string[], country?: string, currency?: string, language?: string) => {
   try {
-    console.log('[Auth Service] Registering user:', email, 'with country:', country);
+    console.log('[Auth Service] Registering user:', email, 'with country:', country, 'currency:', currency, 'language:', language);
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -238,6 +238,8 @@ export const register = async (email: string, password: string, name?: string, p
           name: name || email.split('@')[0],
           role: roles && roles.length > 0 ? roles[0] : 'user',
           onboarding_completed: false,
+          currency: currency || 'USD',
+          language: language || 'en',
         },
         emailRedirectTo: 'https://gjymtvzdvyekhocqyvpa.supabase.co/auth/v1/verify?redirect_to=elmeai://auth/confirm-email'
       },
@@ -259,7 +261,7 @@ export const register = async (email: string, password: string, name?: string, p
     let createdProfile = null;
     if (data.user?.id) {
       try {
-        createdProfile = await createUserProfile(data.user.id, email, name, phone, roles, country); 
+        createdProfile = await createUserProfile(data.user.id, email, name, phone, roles, country, currency, language); 
         console.log('[Auth Service] User profile created/retrieved successfully during registration:', JSON.stringify(createdProfile, null, 2));
       } catch (profileError: any) {
         console.error('[Auth Service] Error creating/retrieving user profile during registration:', profileError.message);
@@ -279,9 +281,9 @@ export const register = async (email: string, password: string, name?: string, p
 };
 
 // Create user profile in the database
-export const createUserProfile = async (userId: string, email: string, name?: string, phone?: string, roles?: string[], country?: string): Promise<any> => {
+export const createUserProfile = async (userId: string, email: string, name?: string, phone?: string, roles?: string[], country?: string, currency?: string, language?: string): Promise<any> => {
   try {
-    console.log('[Auth Service] Creating/Updating user profile for:', email, 'User ID:', userId, 'Country:', country);
+    console.log('[Auth Service] Creating/Updating user profile for:', email, 'User ID:', userId, 'Country:', country, 'currency:', currency, 'language:', language);
     
     let profileExists = false;
     try {
@@ -308,7 +310,7 @@ export const createUserProfile = async (userId: string, email: string, name?: st
       updated_at: new Date().toISOString(),
       email_verified: false, 
       onboarding_completed: false,
-      language: 'en',
+      language: language || 'en',
       dark_mode: false,
       biometric_auth: false,
       notification_matches: true,
@@ -322,7 +324,7 @@ export const createUserProfile = async (userId: string, email: string, name?: st
       property_bathrooms: 0,
       property_locations: [],
       location: country || 'Dubai, UAE', 
-      currency: 'AED',
+      currency: currency || 'AED',
       is_negotiable: false,
       requesting_price: null,
       phone: phone || '', 

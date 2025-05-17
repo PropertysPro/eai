@@ -1,7 +1,9 @@
 import { useCurrencyStore, SupportedCurrency, getCurrencySymbol } from '@/store/currency-store';
 
+const AED_TO_USD_RATE = 0.272294;
+
 export const formatPrice = (
-  price: number | null | undefined, 
+  price: number | null | undefined,
   targetCurrency?: SupportedCurrency,
   options?: {
     minimumFractionDigits?: number;
@@ -14,6 +16,13 @@ export const formatPrice = (
 
   const globalCurrency = useCurrencyStore.getState().currentCurrency;
   const currencyToUse = targetCurrency || globalCurrency;
+
+  let convertedPrice = price;
+  if (currencyToUse === 'USD' && globalCurrency === 'AED') {
+    convertedPrice = price * AED_TO_USD_RATE;
+  } else if (currencyToUse === 'AED' && globalCurrency === 'USD') {
+    convertedPrice = price / AED_TO_USD_RATE;
+  }
   
   // The Intl.NumberFormat 'currency' style often adds the currency code (e.g., AED, USD)
   // which might be redundant if we also want to use a symbol.
@@ -27,7 +36,7 @@ export const formatPrice = (
     maximumFractionDigits: options?.maximumFractionDigits ?? defaultFractionDigits,
   });
 
-  const formattedPrice = formatter.format(price);
+  const formattedPrice = formatter.format(convertedPrice);
   const symbol = getCurrencySymbol(currencyToUse);
 
   // Place symbol according to common conventions (can be made more robust)

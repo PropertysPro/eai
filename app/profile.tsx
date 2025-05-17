@@ -167,7 +167,7 @@ export default function ProfileScreen() {
         language: user.preferences?.language || 'en',
         location: user.preferences?.location || 'Dubai, UAE',
         propertyTypes: user.preferences?.propertyPreferences?.types || [],
-        currency: user.preferences?.currency || 'AED',
+        currency: user.preferences?.currency || 'USD',
         priceRange: user.preferences?.propertyPreferences?.budget 
           ? `${user.preferences.propertyPreferences.budget.min} - ${user.preferences.propertyPreferences.budget.max}`
           : '500K AED - 2.0M AED',
@@ -217,30 +217,30 @@ export default function ProfileScreen() {
       const updateData: Partial<User> = {
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         phone: formData.phone,
-        avatar: formData.avatar,
         preferences: {
           language: formData.language,
           location: formData.location,
           currency: formData.currency,
-          darkMode: formData.darkMode,
-          biometricAuth: user?.preferences?.biometricAuth || false,
+          darkMode: user?.preferences?.darkMode,
+          biometricAuth: user?.preferences?.biometricAuth,
           isNegotiable: formData.isNegotiable,
           requestingPrice: formData.requestingPrice ? Number(formData.requestingPrice) : undefined,
           notifications: {
             matches: formData.pushNotifications,
-            marketUpdates: user?.preferences?.notifications?.marketUpdates || false,
-            newListings: user?.preferences?.notifications?.newListings || false,
-            subscriptionUpdates: user?.preferences?.notifications?.subscriptionUpdates || false,
+            marketUpdates: user?.preferences?.notifications?.marketUpdates,
+            newListings: user?.preferences?.notifications?.newListings,
+            subscriptionUpdates: user?.preferences?.notifications?.subscriptionUpdates,
           },
           propertyPreferences: {
             types: formData.propertyTypes,
             budget: { min: minPrice, max: maxPrice },
-            bedrooms: user?.preferences?.propertyPreferences?.bedrooms || 0,
-            bathrooms: user?.preferences?.propertyPreferences?.bathrooms || 0,
-            locations: user?.preferences?.propertyPreferences?.locations || [],
+            bedrooms: user?.preferences?.propertyPreferences?.bedrooms,
+            bathrooms: user?.preferences?.propertyPreferences?.bathrooms,
+            locations: user?.preferences?.propertyPreferences?.locations,
           }
         }
       };
+      
       if (user.role === 'realtor' || user.role === 'seller') {
         updateData.reraLicenseNumber = formData.reraLicenseNumber;
         updateData.dldLicenseNumber = formData.dldLicenseNumber;
@@ -451,7 +451,6 @@ export default function ProfileScreen() {
             <Text style={styles.sectionLabel}>Currency</Text>
             <TouchableOpacity style={styles.inputContainer} onPress={() => setShowCurrencyModal(true)}>
               <View style={styles.inputWithIcon}>
-                <DollarSign size={20} color={Colors.textLight} style={styles.inputIcon} />
                 <Text style={styles.selectText}>{formData.currency}</Text>
               </View>
             </TouchableOpacity>
@@ -460,7 +459,6 @@ export default function ProfileScreen() {
             <Text style={styles.sectionLabel}>Price Range</Text>
             <TouchableOpacity style={styles.inputContainer} onPress={() => setShowPriceRangeModal(true)}>
               <View style={styles.inputWithIcon}>
-                <DollarSign size={20} color={Colors.textLight} style={styles.inputIcon} />
                 <Text style={styles.selectText}>{formData.priceRange}</Text>
               </View>
             </TouchableOpacity>

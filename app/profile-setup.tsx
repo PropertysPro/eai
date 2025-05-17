@@ -10,17 +10,22 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Dimensions
+  Dimensions,
+  Modal,
+  FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/auth-context';
 import { CheckCircle } from 'lucide-react-native';
 import { User } from '@/types/user';
+import { countries } from '@/constants/locations';
+import { colors as Colors } from '@/constants/colors';
+import { Check } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
-const AXI_RED = '#6200EE';
+const AXI_RED = Colors.primary;
 const CARD_BG = '#FFFFFF';
 const BG = '#FFFFFF';
 const BORDER = '#E0E0E0';
@@ -33,9 +38,11 @@ export default function ProfileSetupScreen() {
 
   // Form state
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
-  const [budget, setBudget] = useState('');
-  const [city, setCity] = useState('');
+  const [budget, setBudget] = useState('500K AED - 2.0M AED');
+  const [city, setCity] = useState('Dubai');
   const [error, setError] = useState('');
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
 
   // Initialize form with user data if available
   useEffect(() => {
@@ -262,22 +269,18 @@ export default function ProfileSetupScreen() {
               </View>
 
               <Text style={styles.label}>Budget Average</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 500K - 2M"
-                value={budget}
-                onChangeText={setBudget}
-                placeholderTextColor="#B0B0B0"
-              />
+              <TouchableOpacity style={styles.inputContainer} onPress={() => setShowBudgetModal(true)}>
+                <View style={styles.inputWithIcon}>
+                  <Text style={styles.selectText}>{budget}</Text>
+                </View>
+              </TouchableOpacity>
 
               <Text style={styles.label}>City</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Dubai, UAE"
-                value={city}
-                onChangeText={setCity}
-                placeholderTextColor="#B0B0B0"
-              />
+              <TouchableOpacity style={styles.inputContainer} onPress={() => setShowCityModal(true)}>
+                <View style={styles.inputWithIcon}>
+                  <Text style={styles.selectText}>{city}</Text>
+                </View>
+              </TouchableOpacity>
 
               {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -303,6 +306,52 @@ export default function ProfileSetupScreen() {
             </View>
           </View>
         </ScrollView>
+
+        {/* Budget Modal */}
+        <Modal visible={showBudgetModal} transparent={true} animationType="slide" onRequestClose={() => setShowBudgetModal(false)}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Budget</Text>
+              <FlatList
+                data={['500K AED - 2.0M AED', '500K - 1M', '1M - 2M', '2M - 5M', '5M+']}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.modalItem} onPress={() => { setBudget(item); setShowBudgetModal(false); }}>
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {budget === item && <Check size={20} color={Colors.primary} />}
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+              <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowBudgetModal(false)}>
+                <Text style={styles.modalCloseButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* City Modal */}
+        <Modal visible={showCityModal} transparent={true} animationType="slide" onRequestClose={() => setShowCityModal(false)}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select City</Text>
+              <FlatList
+                data={countries.flatMap(country => country.cities)}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.modalItem} onPress={() => { setCity(item); setShowCityModal(false); }}>
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {city === item && <Check size={20} color={Colors.primary} />}
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+              <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowCityModal(false)}>
+                <Text style={styles.modalCloseButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -433,6 +482,71 @@ const styles = StyleSheet.create({
     color: '#333',
     marginTop: 24,
     marginBottom: 12,
+  },
+  inputContainer: {
+    backgroundColor: '#F7F7F7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    color: '#222',
+  },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectText: {
+    fontSize: 16,
+    color: '#222',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: Colors.text,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  modalCloseButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  modalCloseButtonText: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: '500',
   },
   successMessage: {
     fontSize: 16,

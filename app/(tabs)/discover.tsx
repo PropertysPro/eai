@@ -204,7 +204,7 @@ export default function DiscoverScreen() {
           {item.title}
         </Text>
         <Text style={styles.hotPropertyPrice}>
-          {formatPrice(item.price, 'AED')}
+          {formatPrice(item.price, item.currency)}
         </Text>
         <Text style={styles.hotPropertyLocation} numberOfLines={1}>
           {item.location}
@@ -227,7 +227,7 @@ export default function DiscoverScreen() {
           {item.title}
         </Text>
         <Text style={styles.distressedDealPrice}>
-          {formatPrice(item.price, 'AED')}
+          {formatPrice(item.price, item.currency)}
         </Text>
         <Text style={styles.distressedDealLocation} numberOfLines={1}>
           {item.location}
@@ -254,15 +254,6 @@ export default function DiscoverScreen() {
       {/* Fixed header outside of ScrollView */}
       <View style={styles.fixedHeader}>
         <Text style={styles.headerTitle}>Discover Matched Properties</Text>
-        <TouchableOpacity 
-          style={styles.currencyToggle}
-          onPress={handleCurrencyToggle}
-        >
-          <DollarSign size={16} color={Colors.primary} />
-          <Text style={styles.currencyText}>
-            {currencyPreference || 'AED'}
-          </Text>
-        </TouchableOpacity>
       </View>
       
       <ScrollView 

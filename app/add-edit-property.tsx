@@ -49,7 +49,7 @@ import { Property, PropertyType } from '@/types/property';
 import AnimatedBubble from '@/components/AnimatedBubble';
 import { useAuth } from '@/context/auth-context';
 import { marketplaceService } from '@/services/marketplace-service';
-import { SupportedCurrency } from '@/store/currency-store'; // Import SupportedCurrency
+import { SupportedCurrency, useCurrencyStore } from '@/store/currency-store'; // Import SupportedCurrency
 
 // Constants
 const propertyTypes: PropertyType[] = [
@@ -153,6 +153,7 @@ export default function AddEditPropertyScreen() {
   const [market_status, setMarketStatus] = useState<'new_to_market' | 'resale'>('resale');
   const [showConstructionStatusDropdown, setShowConstructionStatusDropdown] = useState(false);
   const [showMarketStatusDropdown, setShowMarketStatusDropdown] = useState(false);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
   // Effect to populate form when existingProperty is available
   useEffect(() => {
@@ -534,8 +535,8 @@ export default function AddEditPropertyScreen() {
         // Add new status fields to saved data
         construction_status: construction_status,
         market_status: market_status,
-        currency: 'AED' as SupportedCurrency, // Explicitly type the currency
-        status: 'available' as const,
+        currency: useCurrencyStore.getState().currentCurrency,
+        status: 'available' as Property['status'],
         created_at: existingProperty?.created_at || new Date().toISOString(), // Use existing created_at if updating
         updated_at: new Date().toISOString(),
         // Marketplace listing data
@@ -823,8 +824,7 @@ export default function AddEditPropertyScreen() {
       {/* Price */}
       <View style={styles.formGroup}>
         <View style={styles.labelContainer}>
-          <DollarSign size={16} color={Colors.primary} style={styles.labelIcon} />
-          <Text style={styles.label}>Price (AED)</Text>
+          <Text style={styles.label}>Price</Text>
         </View>
         <TextInput
           style={[
@@ -841,6 +841,45 @@ export default function AddEditPropertyScreen() {
         />
         {errors.price && touchedFields.price && (
           <Text style={styles.errorText}>{errors.price}</Text>
+        )}
+      </View>
+
+      {/* Currency */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Currency</Text>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => {
+            closeAllDropdowns();
+            setShowCurrencyDropdown(!showCurrencyDropdown);
+          }}
+        >
+          <Text style={styles.dropdownButtonText}>{useCurrencyStore.getState().currentCurrency}</Text>
+          <ChevronDown size={20} color={Colors.text} />
+        </TouchableOpacity>
+        {showCurrencyDropdown && (
+          <View style={styles.dropdownMenu}>
+            {(['AED', 'USD', 'EUR', 'GBP', 'INR'] as const).map((currency) => (
+              <TouchableOpacity
+                key={currency}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  useCurrencyStore.getState().setCurrency(currency);
+                  setShowCurrencyDropdown(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  useCurrencyStore.getState().currentCurrency === currency && styles.dropdownItemTextSelected
+                ]}>
+                  {currency}
+                </Text>
+                {useCurrencyStore.getState().currentCurrency === currency && (
+                  <CheckCircle size={16} color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </View>
     </Animated.View>
@@ -1492,6 +1531,45 @@ export default function AddEditPropertyScreen() {
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Currency */}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Currency</Text>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => {
+            closeAllDropdowns();
+            setShowCurrencyDropdown(!showCurrencyDropdown);
+          }}
+        >
+          <Text style={styles.dropdownButtonText}>{useCurrencyStore.getState().currentCurrency}</Text>
+          <ChevronDown size={20} color={Colors.text} />
+        </TouchableOpacity>
+        {showCurrencyDropdown && (
+          <View style={styles.dropdownMenu}>
+            {(['AED', 'USD', 'EUR', 'GBP', 'INR'] as const).map((currency) => (
+              <TouchableOpacity
+                key={currency}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  useCurrencyStore.getState().setCurrency(currency);
+                  setShowCurrencyDropdown(false);
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  useCurrencyStore.getState().currentCurrency === currency && styles.dropdownItemTextSelected
+                ]}>
+                  {currency}
+                </Text>
+                {useCurrencyStore.getState().currentCurrency === currency && (
+                  <CheckCircle size={16} color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
     </Animated.View>
   );

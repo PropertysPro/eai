@@ -24,6 +24,51 @@ export const getUser = async (userId: string) => {
   }
 };
 
+export const createOrGetChatSession = async (userId1: string, userId2: string) => {
+  try {
+    console.log(`[Supabase Service] Creating or getting chat session between ${userId1} and ${userId2}`);
+
+    // Ensure user IDs are in the correct order to prevent duplicate sessions
+    const sortedUserIds = [userId1, userId2].sort();
+    const chatId = `${sortedUserIds[0]}-${sortedUserIds[1]}`;
+
+    // Check if a chat session already exists
+    const { data: existingSession, error: sessionError } = await supabase
+      .from('chat_sessions')
+      .select('*')
+      .eq('id', chatId)
+      .single();
+
+    if (sessionError && sessionError.code !== '404') {
+      console.error('[Supabase Service] Error checking for existing chat session:', sessionError.message);
+      throw sessionError;
+    }
+
+    if (existingSession) {
+      console.log('[Supabase Service] Chat session already exists:', existingSession);
+      return existingSession;
+    }
+
+    // Create a new chat session
+    const { data: newSession, error: newSessionError } = await supabase
+      .from('chat_sessions')
+      .insert([{ id: chatId, user_id1: userId1, user_id2: userId2 }])
+      .select()
+      .single();
+
+    if (newSessionError) {
+      console.error('[Supabase Service] Error creating new chat session:', newSessionError.message);
+      throw newSessionError;
+    }
+
+    console.log('[Supabase Service] Created new chat session:', newSession);
+    return newSession;
+  } catch (error: any) {
+    console.error('[Supabase Service] Error creating or getting chat session:', error.message);
+    throw error;
+  }
+};
+
 export const getUsersWithChatSessions = async () => {
   try {
     console.log('[Supabase Service] Getting users with chat sessions');
@@ -276,25 +321,22 @@ export const getAllProperties = async () => {
   }
 };
 
-export const getRealtorProfiles = async () => {
+export const getRealtorProfiles = async (isSubscribed?: boolean, sortBy?: string) => {
   try {
     console.log('[Supabase Service] Getting realtor profiles');
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('realtors')
       .select(`
         user_id,
-        is_subscribed,
-        profiles!user_id (
-          id,
-          name,
-          agency,
-          avatar_url,
-          specialization,
-          experience_years
-        )
-      `)
-      .eq('is_subscribed', true);
+        is_subscribed
+      `);
+
+    if (isSubscribed !== undefined) {
+      query = query.eq('is_subscribed', isSubscribed);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('[Supabase Service] Error getting realtor profiles:', error.message);
