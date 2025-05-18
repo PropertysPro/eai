@@ -3,39 +3,23 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndi
 import { Stack, useRouter } from 'expo-router';
 import { CheckCircle, XCircle, User as UserIcon } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
-import { User } from '@/types/user'; // Assuming User type includes properties_market_status
-// import adminService from '@/services/admin-service'; // Placeholder for actual service
+import { User } from '@/types/user';
+import adminService from '@/services/admin-service';
 
-// Mock data for pending requests
-const mockPendingRequests: User[] = [
-  {
-    id: 'realtor-pending-1',
-    name: 'Alice Realtor',
-    email: 'alice.realtor@example.com',
-    role: 'realtor',
-    properties_market_status: 'pending_approval',
-    city: 'Dubai',
-    experienceYears: 5,
-    avatar: 'https://randomuser.me/api/portraits/women/3.jpg',
-    // Add other necessary User fields with default/mock values
-    preferences: {} as any, subscription: 'premium', message_count: 0, message_limit: 0, created_at: '', updated_at: '', onboarding_completed: true, email_verified: true,
-  },
-  {
-    id: 'seller-pending-1',
-    name: 'Bob Seller',
-    email: 'bob.seller@example.com',
-    role: 'seller',
-    properties_market_status: 'pending_approval',
-    city: 'Abu Dhabi',
-    experienceYears: 2,
-    avatar: 'https://randomuser.me/api/portraits/men/4.jpg',
-    preferences: {} as any, subscription: 'enterprise', message_count: 0, message_limit: 0, created_at: '', updated_at: '', onboarding_completed: true, email_verified: true,
-  },
-];
+interface Profile {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string;
+  city?: string;
+  experienceYears?: number;
+  subscription: string;
+  is_visible?: boolean;
+}
 
 export default function RealtorVisibilityAdminPage() {
   const router = useRouter();
-  const [pendingRequests, setPendingRequests] = useState<User[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({}); // Track loading state per user ID
 
@@ -46,11 +30,8 @@ export default function RealtorVisibilityAdminPage() {
   const fetchPendingRequests = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const requests = await adminService.getPendingVisibilityRequests();
-      // setPendingRequests(requests);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-      setPendingRequests(mockPendingRequests);
+      const requests = await adminService.getPendingVisibilityRequests();
+      setPendingRequests(requests as Profile[]);
     } catch (error) {
       console.error('Error fetching pending visibility requests:', error);
       Alert.alert('Error', 'Could not fetch pending requests.');
@@ -62,12 +43,10 @@ export default function RealtorVisibilityAdminPage() {
   const handleApprove = async (userId: string) => {
     setActionLoading(prev => ({ ...prev, [userId]: true }));
     try {
-      // TODO: Replace with actual API call to approve
-      // await adminService.updateVisibilityStatus(userId, 'approved');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+      await adminService.updateVisibilityStatus(userId, 'approved');
       Alert.alert('Success', 'User approved for Properties Market visibility.');
-      // Remove from list or refetch
-      setPendingRequests(prev => prev.filter(user => user.id !== userId));
+      // Refetch requests to update the list
+      fetchPendingRequests();
     } catch (error) {
       console.error(`Error approving user ${userId}:`, error);
       Alert.alert('Error', 'Failed to approve user.');
@@ -79,30 +58,28 @@ export default function RealtorVisibilityAdminPage() {
   const handleReject = async (userId: string) => {
     setActionLoading(prev => ({ ...prev, [userId]: true }));
     try {
-      // TODO: Replace with actual API call to reject
-      // await adminService.updateVisibilityStatus(userId, 'rejected');
-       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+      await adminService.updateVisibilityStatus(userId, 'rejected');
       Alert.alert('Success', 'User rejected for Properties Market visibility.');
-      // Remove from list or refetch
-      setPendingRequests(prev => prev.filter(user => user.id !== userId));
+      // Refetch requests to update the list
+      fetchPendingRequests();
     } catch (error) {
       console.error(`Error rejecting user ${userId}:`, error);
-      Alert.alert('Error', 'Failed to reject user.');
+      Alert.alert('Error', 'Failed to approve user.');
     } finally {
       setActionLoading(prev => ({ ...prev, [userId]: false }));
     }
   };
 
-  const renderItem = ({ item }: { item: User }) => (
+  const renderItem = ({ item }: { item: Profile }) => (
     <View style={styles.requestItem}>
       <Image source={{ uri: item.avatar }} style={styles.avatar} />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.name}</Text>
         <Text style={styles.userDetail}>{item.email}</Text>
-        <Text style={styles.userDetail}>Role: {item.role}</Text>
         <Text style={styles.userDetail}>City: {item.city || 'N/A'}</Text>
         <Text style={styles.userDetail}>Experience: {item.experienceYears || 'N/A'} years</Text>
         <Text style={styles.userDetail}>Subscription: {item.subscription}</Text>
+        <Text style={styles.userDetail}>Visibility Status: {item.is_visible ? 'Approved' : 'Rejected'}</Text>
       </View>
       <View style={styles.actions}>
         {actionLoading[item.id] ? (
@@ -132,7 +109,7 @@ export default function RealtorVisibilityAdminPage() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Realtor Visibility Requests' }} />
+      <Stack.Screen options={{ title: 'Realtor Hub Visibility Requests' }} />
       <FlatList
         data={pendingRequests}
         renderItem={renderItem}

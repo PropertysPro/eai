@@ -537,9 +537,8 @@ export default function AddEditPropertyScreen() {
         market_status: market_status,
         currency: useCurrencyStore.getState().currentCurrency,
         status: 'available' as Property['status'],
-        created_at: existingProperty?.created_at || new Date().toISOString(), // Use existing created_at if updating
+        created_at: existingProperty?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        // Marketplace listing data
         isInMarketplace: listInMarketplace,
         marketplacePrice: listInMarketplace && marketplacePrice ? parseFloat(marketplacePrice) : undefined,
         marketplaceDuration: listInMarketplace ? parseInt(marketplaceDuration) : undefined,

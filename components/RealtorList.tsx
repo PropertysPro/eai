@@ -15,6 +15,7 @@ interface RealtorProfile {
     avatar_url: string;
     specialization: string[];
     experience_years: number;
+    is_visible: boolean;
   }[];
 }
 
@@ -40,11 +41,14 @@ const RealtorList = ({ sortBy }: { sortBy?: string }) => {
                 avatar_url: profileData?.avatar || '',
                 specialization: profileData?.specialties || [],
                 experience_years: profileData?.experience_years || 0,
+                is_visible: profileData?.is_visible || false,
               }],
             };
           })
         );
-        setRealtors(realtorProfiles as RealtorProfile[]);
+        // Filter realtors based on is_visible status
+        const visibleRealtors = realtorProfiles.filter(realtor => realtor.profiles[0].is_visible);
+        setRealtors(visibleRealtors as RealtorProfile[]);
       } catch (error) {
         console.error('Error fetching realtor profiles:', error);
       }
@@ -74,11 +78,9 @@ const RealtorList = ({ sortBy }: { sortBy?: string }) => {
                 <Text style={styles.realtorAgency} numberOfLines={1}>{realtor.profiles[0]?.agency || ''}</Text>
                 <Text style={styles.realtorDetail}>Exp: {realtor.profiles[0]?.experience_years} yrs</Text>
                 <Text style={styles.realtorDetail}>Specializes in: {realtor.profiles[0]?.specialization?.join(', ') || ''}</Text>
+                <Text style={styles.realtorDetail}>Visible: {realtor.profiles[0]?.is_visible ? 'Yes' : 'No'}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.chatButton}
-                onPress={() => router.push(`/chat?userId=${realtor.id}`)}
-              >
+              <TouchableOpacity style={styles.chatButton} onPress={() => router.push(`/chat?userId=${realtor.id}`)}>
                 <Text style={styles.chatButtonText}>Chat</Text>
               </TouchableOpacity>
             </TouchableOpacity>

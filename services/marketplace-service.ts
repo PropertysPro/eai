@@ -467,7 +467,6 @@ export const marketplaceService = {
       .from('subscriptions')
       .select('status, plan_id')
       .eq('user_id', userId)
-      .eq('status', 'active')
       .single();
 
     if (error) {
@@ -480,6 +479,6 @@ export const marketplaceService = {
     }
 
     // Check if the user has a paid plan (not free tier)
-    return data && data.status === 'active' && data.plan_id !== 'free';
+    return data?.status === 'active' && data?.plan_id !== 'free';
   }
 };

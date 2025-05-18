@@ -29,7 +29,7 @@ export const useCurrencyStore = create<CurrencyState>()(
 export const getCurrencySymbol = (currencyCode: SupportedCurrency): string => {
   switch (currencyCode) {
     case 'AED':
-      return 'Ð'; // Or 'د.إ'
+      return 'AED'; // Or 'د.إ'
     case 'USD':
       return '$';
     case 'EUR':

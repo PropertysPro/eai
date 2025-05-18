@@ -18,16 +18,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { 
-  ChevronLeft, 
-  Check, 
-  Home, 
-  Globe, 
-  DollarSign, 
-  Save, 
-  User as UserIcon, 
-  Camera, 
-  Lock, 
-  Shield, 
+  ChevronLeft,
+  Check,
+  Home,
+  Globe,
+  DollarSign,
+  Save,
+  User as UserIcon,
+  Camera,
+  Lock,
+  Shield,
   Eye,
   Bell,
   Moon,
@@ -40,6 +40,8 @@ import { SUPPORTED_LANGUAGES } from '@/config/env';
 import { useLocalSearchParams } from 'expo-router';
 import { User } from '@/types/user';
 import * as authService from '@/services/auth-service';
+import { countries } from '@/constants/locations';
+import { Picker } from '@react-native-picker/picker';
 
 // Define supported currencies
 const SUPPORTED_CURRENCIES = ['AED', 'USD', 'EUR', 'GBP', 'INR'];
@@ -49,7 +51,7 @@ const DEFAULT_AVATAR = require('@/assets/favicon-logo.png');
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, updateProfile, isLoading } = useAuth();
+  const { user, updateProfile, isLoading, refreshUser } = useAuth();
   const { currencyPreference, setCurrencyPreference } = usePropertyStore();
   const params = useLocalSearchParams();
   const firstTime = params?.firstTime === 'true';
@@ -74,6 +76,7 @@ export default function ProfileScreen() {
     admLicenseNumber: '',
     // New realtor/seller fields
     city: '',
+    country: [] as string[],
     experienceYears: '', // Storing as string for TextInput, convert to number on save
     specialties: [] as string[],
     languagesSpoken: [] as string[],
@@ -97,8 +100,22 @@ export default function ProfileScreen() {
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showPriceRangeModal, setShowPriceRangeModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showSpecialtiesModal, setShowSpecialtiesModal] = useState(false);
+  const [showLanguagesModal, setShowLanguagesModal] = useState(false);
+  const [showCountryModal, setShowCountryModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const commonSpecialties = [
+    "Luxury Villas", "Luxury Apartments", "Commercial Real Estate", 
+    "Residential Sales", "Residential Leasing", "Off-plan Properties", 
+    "Land Sales", "Property Management"
+  ];
+  
+  const commonLanguages = [
+    "English", "Arabic", "French", "Spanish", "Russian", 
+    "Hindi", "Urdu", "Chinese (Mandarin)", "German"
+  ];
   
   // Function to handle image picking and uploading
   const handlePickImage = async () => {
@@ -159,7 +176,7 @@ export default function ProfileScreen() {
         firstName = nameParts[0] || '';
         lastName = nameParts.slice(1).join(' ') || '';
       }
-      setFormData({
+      setFormData(prev => ({
         firstName: firstName,
         lastName: lastName,
         email: user.email || '',
@@ -168,18 +185,19 @@ export default function ProfileScreen() {
         location: user.preferences?.location || 'Dubai, UAE',
         propertyTypes: user.preferences?.propertyPreferences?.types || [],
         currency: user.preferences?.currency || 'USD',
-        priceRange: user.preferences?.propertyPreferences?.budget 
-          ? `${user.preferences.propertyPreferences.budget.min} - ${user.preferences.propertyPreferences.budget.max}`
+        priceRange: user.preferences?.propertyPreferences?.budget
+          ? `${user.preferences?.propertyPreferences?.budget?.min} - ${user.preferences?.propertyPreferences?.budget?.max}`
           : '500K AED - 2.0M AED',
-        requestingPrice: user.preferences?.requestingPrice ? String(user.preferences.requestingPrice) : '',
+        requestingPrice: user.preferences?.requestingPrice ? String(user.preferences?.requestingPrice) : '',
         isNegotiable: user.preferences?.isNegotiable || false,
         pushNotifications: user.preferences?.notifications?.matches || false,
         darkMode: user.preferences?.darkMode || false,
-        avatar: DEFAULT_AVATAR,
+        avatar: user.avatar || DEFAULT_AVATAR,
         reraLicenseNumber: user.reraLicenseNumber || '',
         dldLicenseNumber: user.dldLicenseNumber || '',
         admLicenseNumber: user.admLicenseNumber || '',
         city: user.city || '',
+        country: user.country ? [user.country] : [],
         experienceYears: user.experienceYears ? String(user.experienceYears) : '',
         specialties: user.specialties || [],
         languagesSpoken: user.languagesSpoken || [],
@@ -192,10 +210,10 @@ export default function ProfileScreen() {
         tiktok_url: user.tiktok_url || '',
         instagram_url: user.instagram_url || '',
         snapchat_username: user.snapchat_username || '',
-      });
+      }));
     }
   }, [user]);
-  
+
   const handleSaveChanges = async () => {
     if (!user) return;
     setIsSaving(true);
@@ -246,11 +264,12 @@ export default function ProfileScreen() {
         updateData.dldLicenseNumber = formData.dldLicenseNumber;
         updateData.admLicenseNumber = formData.admLicenseNumber;
         updateData.city = formData.city;
+        updateData.country = formData.country.length > 0 ? formData.country[0] : '';
         updateData.experienceYears = formData.experienceYears ? parseInt(formData.experienceYears, 10) : undefined;
         updateData.specialties = formData.specialties;
         updateData.languagesSpoken = formData.languagesSpoken;
         updateData.bio = formData.bio;
-        // Social media fields
+         // Social media fields
         updateData.linkedin_url = formData.linkedin_url;
         updateData.youtube_url = formData.youtube_url;
         updateData.whatsapp_number = formData.whatsapp_number;
@@ -263,6 +282,7 @@ export default function ProfileScreen() {
       console.log('[Profile] Prepared update data:', JSON.stringify(updateData, null, 2));
       const updatedUser = await updateProfile(updateData);
       console.log('[Profile] Profile updated successfully:', updatedUser);
+      await refreshUser(); // Refresh user data after update
       Alert.alert('Success', 'Profile updated successfully', [{ text: 'OK' }]);
       if (firstTime) {
         router.replace('/(tabs)');
@@ -324,21 +344,29 @@ export default function ProfileScreen() {
   // Function to handle the request visibility action
   const handleRequestVisibility = async () => {
     if (!user || user.subscription === 'free') return;
-    const currentStatus = formData.properties_market_status;
-    // Optimistically update UI
-    setFormData(prev => ({ ...prev, properties_market_status: 'pending_approval' }));
     try {
-      // Assuming updateProfile can handle partial updates including just the status
+      await refreshUser();
       await updateProfile({ properties_market_status: 'pending_approval' });
+      setFormData(prev => ({ ...prev, properties_market_status: 'pending_approval' }));
       Alert.alert('Success', 'Your request to appear in the Properties Market has been submitted for approval.');
     } catch (error: any) {
        console.error('[Profile] Error requesting visibility:', error);
        Alert.alert('Error', 'Failed to submit visibility request.');
-       // Revert optimistic update on error
-       setFormData(prev => ({ ...prev, properties_market_status: currentStatus })); 
     }
   };
-  
+
+  const handleCancelVisibility = async () => {
+    try {
+      await refreshUser();
+      await updateProfile({ properties_market_status: 'not_requested' });
+      setFormData(prev => ({ ...prev, properties_market_status: 'not_requested' }));
+      Alert.alert('Success', 'Your visibility request has been cancelled.');
+    } catch (error: any) {
+      console.error('[Profile] Error cancelling visibility request:', error);
+      Alert.alert('Error', 'Failed to cancel visibility request.');
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -498,6 +526,16 @@ export default function ProfileScreen() {
               </View>
             </View>
             <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Country</Text>
+              <TouchableOpacity style={styles.inputContainer} onPress={() => setShowCountryModal(true)}>
+                <View style={styles.inputWithIcon}>
+                  <Text style={styles.selectText}>
+                    {formData.country.length > 0 ? formData.country[0] : 'Select Countries'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.section}>
               <Text style={styles.sectionLabel}>Years of Experience</Text>
               <View style={styles.inputContainer}>
                 <TextInput style={styles.input} value={formData.experienceYears} onChangeText={(text) => setFormData(prev => ({ ...prev, experienceYears: text.replace(/[^0-9]/g, '') }))} placeholder="e.g., 5" keyboardType="number-pad" placeholderTextColor={Colors.input.placeholder} />
@@ -510,16 +548,24 @@ export default function ProfileScreen() {
               </View>
             </View>
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Specialties (comma-separated)</Text>
-              <View style={styles.inputContainer}>
-                <TextInput style={styles.input} value={formData.specialties.join(', ')} onChangeText={(text) => setFormData(prev => ({ ...prev, specialties: text.split(',').map(s => s.trim()).filter(s => s) }))} placeholder="e.g., Luxury Villas, Off-plan" placeholderTextColor={Colors.input.placeholder} />
-              </View>
+              <Text style={styles.sectionLabel}>Specialties</Text>
+              <TouchableOpacity style={styles.inputContainer} onPress={() => setShowSpecialtiesModal(true)}>
+                <View style={styles.inputWithIcon}>
+                  <Text style={styles.selectText}>
+                    {formData.specialties.length > 0 ? formData.specialties.join(', ') : 'Select Specialties'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Languages Spoken (comma-separated)</Text>
-              <View style={styles.inputContainer}>
-                <TextInput style={styles.input} value={formData.languagesSpoken.join(', ')} onChangeText={(text) => setFormData(prev => ({ ...prev, languagesSpoken: text.split(',').map(s => s.trim()).filter(s => s) }))} placeholder="e.g., English, Arabic" placeholderTextColor={Colors.input.placeholder} />
-              </View>
+              <Text style={styles.sectionLabel}>Languages Spoken</Text>
+              <TouchableOpacity style={styles.inputContainer} onPress={() => setShowLanguagesModal(true)}>
+                <View style={styles.inputWithIcon}>
+                  <Text style={styles.selectText}>
+                    {formData.languagesSpoken.length > 0 ? formData.languagesSpoken.join(', ') : 'Select Languages'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
 
             {/* Social Media Links */}
@@ -585,6 +631,15 @@ export default function ProfileScreen() {
                   )}
                    {formData.properties_market_status === 'approved' && (
                      <Text style={styles.statusSubText}>You are visible in the Properties Market.</Text>
+                  )}
+                  {(formData.properties_market_status === 'pending_approval') && (
+                    <TouchableOpacity onPress={async () => {
+                      setFormData(prev => ({ ...prev, properties_market_status: 'not_requested' }));
+                      await updateProfile({ properties_market_status: 'not_requested' });
+                      Alert.alert('Success', 'Your visibility request has been cancelled.');
+                    }} style={styles.cancelButton}>
+                      <Text style={styles.cancelButtonText}>Cancel Request</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               )}
@@ -700,6 +755,86 @@ export default function ProfileScreen() {
       <Modal visible={showLanguageModal} transparent={true} animationType="slide" onRequestClose={() => setShowLanguageModal(false)}>
          <View style={styles.modalContainer}><View style={styles.modalContent}><Text style={styles.modalTitle}>Select Language</Text><FlatList data={SUPPORTED_LANGUAGES} renderItem={renderLanguageItem} keyExtractor={(item) => item} ItemSeparatorComponent={() => <View style={styles.separator} />} /><TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowLanguageModal(false)}><Text style={styles.modalCloseButtonText}>Cancel</Text></TouchableOpacity></View></View>
       </Modal>
+
+      {/* Specialties Modal */}
+      <Modal
+        visible={showSpecialtiesModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSpecialtiesModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Specialties</Text>
+            <ScrollView>
+              {commonSpecialties.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      specialties: prev.specialties.includes(item)
+                        ? prev.specialties.filter(s => s !== item)
+                        : [...prev.specialties, item]
+                    }));
+                  }}
+                >
+                  <Text style={[styles.modalItemText, formData.specialties.includes(item) && styles.modalItemTextSelected]}>
+                    {item}
+                  </Text>
+                  {formData.specialties.includes(item) && <Check size={20} color={Colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowSpecialtiesModal(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Country Modal */}
+      <Modal
+        visible={showCountryModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCountryModal(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Countries</Text>
+            <ScrollView>
+              {countries.map((item) => (
+                <TouchableOpacity
+                  key={item.name}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      country: prev.country.includes(item.name)
+                        ? prev.country.filter(s => s !== item.name)
+                        : [...prev.country, item.name]
+                    }));
+                  }}
+                >
+                  <Text style={[styles.modalItemText, formData.country.includes(item.name) && styles.modalItemTextSelected]}>
+                    {item.name}
+                  </Text>
+                  {formData.country.includes(item.name) && <Check size={20} color={Colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowCountryModal(false)}>
+              <Text style={styles.modalCloseButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -758,6 +893,10 @@ const styles = StyleSheet.create({
   separator: { height: 1, backgroundColor: Colors.border },
   modalCloseButton: { marginTop: 16, paddingVertical: 12, alignItems: 'center', borderTopWidth: 1, borderTopColor: Colors.border },
   modalCloseButtonText: { fontSize: 16, color: Colors.primary, fontWeight: '500' },
+  modalItemTextSelected: {
+    fontWeight: 'bold',
+    color: Colors.primary,
+  },
   ratingSummary: { marginBottom: 16, alignItems: 'center' },
   averageRatingText: { fontSize: 16, fontWeight: 'bold', color: Colors.text },
   reviewItem: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
@@ -777,4 +916,13 @@ const styles = StyleSheet.create({
   upgradeButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
   requestButton: { marginTop: 8, backgroundColor: Colors.primary, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20 },
   requestButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  cancelButton: { marginTop: 8, backgroundColor: Colors.error, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20 },
+  cancelButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  picker: {
+    width: 150,
+    height: 40,
+    borderColor: Colors.border,
+    borderWidth: 1,
+    borderRadius: 5,
+  },
 });

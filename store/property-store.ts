@@ -5,6 +5,7 @@ import { Property, PropertyFilters, PropertyFormData } from '@/types/property';
 import { supabase } from '@/config/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { propertyService } from '@/services/property-service';
+import { SupportedCurrency } from '@/store/currency-store';//Import SupportedCurrency
 
 interface PropertyState {
   properties: Property[];
@@ -236,10 +237,16 @@ const usePropertyStore = create<PropertyState>()(
             // If we got here, the table exists and we have matches
             if (matches && matches.length > 0) {
               const propertyIds = matches.map(m => m.property_id);
-              const { data: properties } = await supabase
+              const { data: properties, error: propertiesError } = await supabase
                 .from('properties')
                 .select('*')
                 .in('id', propertyIds);
+
+            if (propertiesError) {
+              console.error('Error fetching properties:', propertiesError);
+              set({ matches: [], loading: false });
+              return;
+            }
 
               set({ matches: properties || [], loading: false });
             } else {
@@ -485,12 +492,12 @@ const usePropertyStore = create<PropertyState>()(
             
             // Add updated_at timestamp
             dbFormattedData.updated_at = new Date().toISOString();
-            
+
             console.log('Updating property with formatted data:', dbFormattedData);
-            
+
             const { error } = await supabase
               .from('properties')
-              .update(dbFormattedData)
+              .update({currency: 'AED'})
               .eq('id', id);
 
             if (error) {

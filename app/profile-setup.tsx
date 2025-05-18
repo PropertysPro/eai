@@ -41,8 +41,10 @@ export default function ProfileSetupScreen() {
   const [budget, setBudget] = useState('500K AED - 2.0M AED');
   const [city, setCity] = useState('Dubai');
   const [error, setError] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showCityModal, setShowCityModal] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   // Initialize form with user data if available
   useEffect(() => {
@@ -103,9 +105,9 @@ export default function ProfileSetupScreen() {
               matches: true,
               marketUpdates: true,
               newListings: true,
-              subscriptionUpdates: true
+            subscriptionUpdates: true
             },
-            currency: 'USD',
+            currency: currency,
             isNegotiable: false
           }),
           location: city,
@@ -282,6 +284,13 @@ export default function ProfileSetupScreen() {
                 </View>
               </TouchableOpacity>
 
+              <Text style={styles.label}>Currency</Text>
+              <TouchableOpacity style={styles.inputContainer} onPress={() => setShowCurrencyModal(true)}>
+                <View style={styles.inputWithIcon}>
+                  <Text style={styles.selectText}>{currency}</Text>
+                </View>
+              </TouchableOpacity>
+
               {error ? <Text style={styles.error}>{error}</Text> : null}
 
               <TouchableOpacity
@@ -347,6 +356,29 @@ export default function ProfileSetupScreen() {
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
               />
               <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowCityModal(false)}>
+                <Text style={styles.modalCloseButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Currency Modal */}
+        <Modal visible={showCurrencyModal} transparent={true} animationType="slide" onRequestClose={() => setShowCurrencyModal(false)}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Currency</Text>
+              <FlatList
+                data={['USD', 'EUR', 'GBP', 'AED']}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.modalItem} onPress={() => { setCurrency(item); setShowCurrencyModal(false); }}>
+                    <Text style={styles.modalItemText}>{item}</Text>
+                    {currency === item && <Check size={20} color={Colors.primary} />}
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+              <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowCurrencyModal(false)}>
                 <Text style={styles.modalCloseButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>

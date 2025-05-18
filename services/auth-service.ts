@@ -13,9 +13,13 @@ export const updateProfile = async (updates: any): Promise<User> => {
     if (sessionError || !sessionResult?.session) {
       console.log('[Auth Service] No active session, attempting to refresh...');
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshData.session) {
-        console.error('[Auth Service] Update profile error: No valid session available while trying to refresh.');
-        throw new Error('Update profile error: Auth session missing or could not be refreshed!');
+      if (refreshError) {
+        console.error('[Auth Service] Update profile error: No valid session available while trying to refresh.', refreshError.message);
+        throw new Error(`Update profile error: Auth session missing or could not be refreshed! ${refreshError.message}`);
+      }
+      if (!refreshData?.session) {
+        console.error('[Auth Service] Update profile error: No valid session available after refresh.');
+        throw new Error('Update profile error: No valid session available after refresh!');
       }
       sessionResult = refreshData;
     }
@@ -122,17 +126,16 @@ export const updateProfile = async (updates: any): Promise<User> => {
       whatsapp_number: updates.whatsapp_number !== undefined ? updates.whatsapp_number : profile.whatsapp_number,
       tiktok_url: updates.tiktok_url !== undefined ? updates.tiktok_url : profile.tiktok_url,
       instagram_url: updates.instagram_url !== undefined ? updates.instagram_url : profile.instagram_url,
-      snapchat_username: updates.snapchat_username !== undefined ? updates.snapchat_username : profile.snapchat_username,
-
+      is_visible: updates.properties_market_status === 'approved' ? true : false,
       phone: updates.phone !== undefined ? updates.phone : profile.phone,
       country: updates.country !== undefined ? updates.country : profile.country,
       subscription: updates.subscription !== undefined ? updates.subscription : profile.subscription,
     };
-    
+
     if (updates.name !== undefined) {
-        profileUpdate.name = updates.name;
+      profileUpdate.name = updates.name;
     } else if (profile.name) {
-        profileUpdate.name = profile.name;
+      profileUpdate.name = profile.name;
     }
 
     if (updates.avatar !== undefined) {

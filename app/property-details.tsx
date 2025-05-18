@@ -6,7 +6,7 @@ import usePropertyStore from '@/store/property-store';
 import { useChatStore } from '@/store/chat-store';
 import { Property } from '@/types/property';
 import { colors as Colors } from '@/constants/colors';
-import { formatPrice } from '@/utils/helpers';
+import { formatPrice } from '@/utils/format';
 import { useAuth } from '@/context/auth-context';
 import { useCurrencyStore } from '@/store/currency-store';
 
@@ -79,7 +79,7 @@ const PropertyDetails = () => {
   
   const handleShare = async () => {
     try {
-      const shareMessage = `Check out this property: ${property?.title}\n${property?.location}\nPrice: ${formatPrice(property?.price || 0, property?.currency || 'USD')}\n\nView more details in the app!`;
+      const shareMessage = `Check out this property: ${property?.title}\n${property?.location}\nPrice: ${formatPrice(property?.price || 0, property?.currency)}\n\nView more details in the app!`;
       
       // Use React Native's Share API
       const { Share } = require('react-native');
@@ -244,9 +244,11 @@ const PropertyDetails = () => {
         
         {/* Property Details */}
         <View style={styles.detailsContainer}>
-          <Text style={styles.price}>
-            {formatPrice(property.price, property.currency || useCurrencyStore.getState().currentCurrency).replace(/[^0-9.,]+/g, '')}
-          </Text>
+<Text style={styles.price}>
+{property.marketplacePrice
+    ? formatPrice(property.marketplacePrice, property.currency || 'AED')
+    : formatPrice(property.price, property.currency || 'AED')}
+</Text>
           
           <Text style={styles.title}>{property.title}</Text>
           
@@ -330,7 +332,7 @@ const PropertyDetails = () => {
               onPress={handleChatWithAgent}
             >
               <MessageCircle size={20} color="white" />
-              <Text style={styles.contactButtonText}>Chat with Admin</Text>
+              <Text style={styles.contactButtonText}>Chat with Lister</Text>
             </TouchableOpacity>
           </View>
         </View>

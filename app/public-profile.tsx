@@ -231,11 +231,6 @@ export default function PublicProfileScreen() {
               <MapPin size={16} color={Colors.textLight ?? '#666666'} style={{marginRight: 6}} /> {profileUser.city}
             </Text>
           )}
-          {profileUser.specialties && profileUser.specialties.length > 0 && (
-            <Text style={styles.specialtiesText}>
-              {/* Specialties removed from here */}
-            </Text>
-          )}
         </View>
 
         <View style={styles.actionButtonsContainer}>
@@ -251,7 +246,9 @@ export default function PublicProfileScreen() {
               <UserIcon size={22} color={Colors.primary ?? '#6200EE'} />
               <Text style={styles.sectionTitle}>About Me</Text>
             </View>
-            <Text style={styles.bioText}>{profileUser.bio}</Text>
+            <View style={styles.sectionContent}>
+              <Text style={styles.bioText}>{profileUser.bio}</Text>
+            </View>
           </View>
         )}
 
@@ -262,12 +259,24 @@ export default function PublicProfileScreen() {
               <Award size={22} color={Colors.primary ?? '#6200EE'} />
               <Text style={styles.sectionTitle}>Specialties</Text>
             </View>
-            <View style={styles.specialtiesContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.specialtiesContainer}>
               {profileUser.specialties.map((specialty, index) => (
                 <View key={index} style={styles.specialtyItem}>
                   <Text style={styles.specialtyText}>{specialty}</Text>
                 </View>
               ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {profileUser.country && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Globe size={22} color={Colors.primary ?? '#6200EE'} />
+              <Text style={styles.sectionTitle}>Country Work In</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.bioText}>{profileUser.country}</Text>
             </View>
           </View>
         )}
@@ -489,11 +498,18 @@ const styles = StyleSheet.create({
     fontSize: 15, // Slightly smaller bio text
     color: Colors.textLight ?? '#666666', 
     lineHeight: 22, // Adjusted line height
-    textAlign: 'left', 
+    textAlign: 'left',
     marginTop: 4, // Added top margin for spacing
   },
-  socialLinksContainer: { 
-    flexDirection: 'row', 
+  sectionContent: {
+    paddingTop: 8,
+    fontSize: 15, // Slightly smaller bio text
+    color: Colors.textLight ?? '#666666',
+    lineHeight: 22, // Adjusted line height
+    textAlign: 'left',
+  },
+  socialLinksContainer: {
+    flexDirection: 'row',
     flexWrap: 'wrap', 
     justifyContent: 'space-around', 
     paddingTop: 12 // Added padding top
